@@ -1,0 +1,6 @@
+.account-card { margin-bottom:20px; }
+.account-card .detail-grid { margin-bottom:24px; }
+.account-card>p { margin:16px 0; }
+.order-row { display:flex; justify-content:space-between; align-items:center; gap:20px; padding:20px 0; border-bottom:1px solid var(--line); }
+.order-row p { margin-top:6px; }
+@media(max-width:480px) { .order-row { flex-wrap:wrap; } }

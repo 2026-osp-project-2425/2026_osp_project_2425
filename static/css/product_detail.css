@@ -1,0 +1,15 @@
+.detail-title { display:flex; align-items:center; justify-content:space-between; gap:16px; }
+.detail-title h2 { font-size:clamp(22px,2vw,30px); }
+.detail-card .detail-grid dd>a { display:block; margin-top:4px; }
+.option-panel { display:flex; flex-direction:column; align-items:center; gap:12px; }
+.option-panel hr { margin:4px 0; }
+.option-panel fieldset { border:0; padding:0; margin:8px 0; width:100%; }
+.option-panel legend { text-align:center; margin-bottom:12px; width:100%; color:#cce5da; font-size:14px; }
+.choice { position:relative; cursor:pointer; }
+.choice input { position:absolute; opacity:0; }
+.choice span { display:inline-flex; padding:8px 12px; min-width:36px; border-radius:30px; background:#fff; color:var(--muted); font-weight:700; font-size:13px; }
+.choice input:checked+span { color:var(--green); outline:2px solid #93c9b9; outline-offset:2px; }
+.choice input:focus-visible+span { outline:3px solid #b6e1d2; }
+.quantity { width:80px; text-align:center; }
+#option-form>.btn { margin-top:18px; }
+#option-form>.small { margin-top:14px; }

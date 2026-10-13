@@ -1,0 +1,14 @@
+.product-card { display:flex; gap:24px; align-items:center; }
+.product-card .card-body { flex:1; }
+.card-footer { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:12px; }
+.price { color:var(--green); font-size:24px; white-space:nowrap; }
+.rank-list { list-style:none; padding:0; margin:22px 0; display:flex; flex-direction:column; gap:18px; }
+.rank-list li { display:flex; align-items:center; gap:12px; min-width:0; }
+.rank-list li>span { width:36px; height:36px; border-radius:8px; background:#e5eae5; color:var(--green); flex-shrink:0; text-align:center; line-height:36px; font-weight:700; }
+.rank-list li a { min-width:0; }
+.rank-list small { display:block; color:#cee4da; font-size:10px; }
+.rank-list strong { font-size:14px; overflow-wrap:anywhere; }
+.filter-summary { margin-bottom:16px; color:var(--muted); }
+.filter-summary a { color:var(--green); margin-left:14px; }
+@media(max-width:1200px) { .product-card { gap:16px; padding:18px; } .price { font-size:20px; } .card-footer { flex-wrap:wrap; } }
+@media(max-width:480px) { .product-card { align-items:flex-start; gap:12px; } .product-card .card-photo .photo-slot { width:86px; } .product-card h3 { font-size:16px; } .detail-link { gap:8px; } }

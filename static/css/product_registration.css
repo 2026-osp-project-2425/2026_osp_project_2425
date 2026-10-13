@@ -1,0 +1,5 @@
+#product-form .form-card { width:100%; }
+#product-form .form-grid input,#product-form .form-grid select { min-height:42px; }
+#product-form .input-group #target_count { max-width:120px; }
+#product-form .input-group #target_amount { max-width:260px; }
+#product-form .input-group #price { max-width:360px; }

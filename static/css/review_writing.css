@@ -1,0 +1,6 @@
+.product-select { display:flex; align-items:center; gap:16px; margin-bottom:16px; }
+.product-select label { color:var(--green); font-weight:700; white-space:nowrap; }
+.product-select select { max-width:400px; }
+.rating-input { display:flex; align-items:center; flex-wrap:wrap; gap:16px; }
+.rating-input select { max-width:220px; }
+.review-detail .form-grid { margin-top:24px; }

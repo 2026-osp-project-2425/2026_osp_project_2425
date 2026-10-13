@@ -1,0 +1,14 @@
+.review-card { display:grid; grid-template-columns:auto minmax(0,1fr) auto; gap:18px; align-items:center; }
+.review-card .card-photo .photo-slot { width:128px; }
+.review-card-side { display:flex; flex-direction:column; justify-content:space-between; align-self:stretch; gap:26px; padding:4px 0; }
+.rating-inline { display:flex; align-items:center; gap:16px; color:var(--green); }
+.rating-inline .stars { font-size:19px; letter-spacing:0; }
+.review-excerpt { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.satisfaction { text-align:center; }
+.average { font-size:48px; font-weight:700; margin-top:20px; white-space:nowrap; }
+.average small { font-size:18px; font-weight:400; }
+.review-total { display:flex; justify-content:space-between; align-items:center; font-size:13px; margin-bottom:18px; }
+.review-total strong { font-size:24px; }
+.satisfaction .soft-text { text-align:left; }
+@media(max-width:1400px) { .review-card { grid-template-columns:auto minmax(0,1fr); gap:16px; } .review-card-side { grid-column:2; flex-direction:row; align-items:center; padding:0; } .review-card .card-photo { grid-row:1/3; } .review-card .card-photo .photo-slot { width:104px; } }
+@media(max-width:480px) { .review-card .card-photo .photo-slot { width:80px; } .rating-inline { gap:5px; } .rating-inline .stars { font-size:14px; } .review-card h3 { font-size:16px; } }

@@ -1,0 +1,59 @@
+{% macro navigation(class_name="navigation") %}
+<div class="{{ class_name }}">
+    <a class="product-list2"
+       href="{{ url_for('view_list') }}">
+        PRODUCT LIST
+    </a>
+
+    <a class="product-registration2"
+       href="{{ url_for('reg_item') }}">
+        PRODUCT REGISTRATION
+    </a>
+
+    <a class="review-list"
+       href="{{ url_for('view_review') }}">
+        REVIEW LIST
+    </a>
+
+    <a class="review-writing2"
+       href="{{ url_for('reg_review') }}">
+        REVIEW WRITING
+    </a>
+
+    <a class="login-logout2"
+       href="{{ url_for('login') }}">
+        LOGIN/LOGOUT
+    </a>
+</div>
+{% endmacro %}
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>{% block title %}이화 공동구매 플랫폼{% endblock %}</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/' ~ css_file) }}">
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/common.css') }}">
+
+    {% block extra_css %}{% endblock %}
+
+    <script src="{{ url_for('static', filename='main.js') }}"
+            defer></script>
+</head>
+<body>
+    {% block section %}
+    <main class="site-home">
+        <h1>이화인을 위한 간편 공동구매 플랫폼</h1>
+        {{ navigation() }}
+        <p>상품과 리뷰를 확인하거나 상품 등록을 진행해 주세요.</p>
+    </main>
+    {% endblock %}
+</body>
+</html>

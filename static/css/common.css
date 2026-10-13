@@ -1,0 +1,60 @@
+.navigation a,
+.bar a,
+.side-bar a {
+    text-decoration: none;
+}
+
+.site-home,
+.site-result {
+    max-width: 1000px;
+    margin: 40px auto;
+    padding: 24px;
+    font-family: sans-serif;
+    color: #17212c;
+}
+
+.site-home h1,
+.site-result h1 {
+    color: #185d48;
+}
+
+.site-home .navigation,
+.site-result .navigation {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    padding: 20px;
+    background: #141414;
+    border-radius: 20px;
+}
+
+.site-home .navigation a,
+.site-result .navigation a {
+    color: white;
+    font-size: 14px;
+}
+
+.result-table {
+    width: 100%;
+    margin-top: 24px;
+    border-collapse: collapse;
+}
+
+.result-table th,
+.result-table td {
+    padding: 12px;
+    border: 1px solid #dadada;
+    text-align: left;
+    overflow-wrap: anywhere;
+}
+
+.result-table th {
+    width: 180px;
+}
+
+.result-image {
+    display: block;
+    max-width: 100%;
+    max-height: 400px;
+    object-fit: contain;
+}

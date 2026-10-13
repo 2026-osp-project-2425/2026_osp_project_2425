@@ -1,0 +1,22 @@
+{% extends "index.html" %}
+{% block content %}
+<form id="product-form" action="{{ url_for('reg_item_submit_post') }}" method="post" enctype="multipart/form-data" data-draft="product">
+<section class="white-card form-card">
+    <label class="sr-only" for="name">상품명</label><input class="title-input" id="name" name="name" placeholder="상품명" required>
+    <div class="form-grid">
+        <label for="seller_id">판매자 ID</label><input id="seller_id" name="seller_id" placeholder="판매자 ID" value="{{ user.username if user else '' }}" required>
+        <label for="address">주소</label><input id="address" name="address" placeholder="상품 수령 또는 거래 주소" required>
+        <label for="status">상품 상태</label><select id="status" name="status" required><option value="new">새 상품</option><option value="lnew">새것에 가까움</option><option value="used">중고</option></select>
+        <label for="email">이메일</label><input type="email" id="email" name="email" placeholder="example@ewha.ac.kr" value="{{ user.email if user else '' }}" required>
+        <label for="start_date">공동구매 진행 일자 <small>(선택)</small></label><div class="input-group date-group"><input type="date" id="start_date" name="start_date" aria-label="공동구매 시작일"><span>~</span><input type="date" id="end_date" name="end_date" aria-label="공동구매 종료일"></div>
+        <label for="pickup_datetime">상품 수령 일시 <small>(선택)</small></label><input type="datetime-local" id="pickup_datetime" name="pickup_datetime">
+        <label for="target_amount">목표 금액 / 개수 <small>(선택)</small></label><div class="input-group"><input type="number" min="0" step="1" id="target_amount" name="target_amount" placeholder="목표 금액"><span>원</span><input type="number" min="1" step="1" id="target_count" name="target_count" placeholder="개수" aria-label="목표 개수"><span>개</span></div>
+        <label for="price">예상 가격</label><div class="input-group"><input type="number" id="price" name="price" min="0" step="1" placeholder="원 단위 입력" required><span>원</span></div>
+        <label for="file_input">상품 사진</label><div class="upload-control" data-upload><div class="photo-pair"><div class="photo-slot light"><img data-preview alt="선택한 상품 사진" hidden></div><label class="photo-slot upload-tile" for="file_input">{{ icon('plus') }}<span>드래그 앤 드롭 또는<br>파일 불러오기</span><input id="file_input" name="file_input" type="file" accept="image/png,image/jpeg,image/gif,image/webp" required></label></div><p class="file-caption" data-file-name>선택한 파일이 없습니다.</p></div>
+        <label for="manufacturer">제작 업체 <small>(선택)</small></label><input id="manufacturer" name="manufacturer" placeholder="제작 업체">
+        <label for="description">상품 상세 설명 <small>(선택)</small></label><textarea id="description" name="description" rows="3" placeholder="상품의 특징과 안내사항"></textarea>
+    </div>
+</section>
+<div class="form-actions"><p class="muted small" data-draft-status aria-live="polite"></p><button class="btn btn-white" type="button" data-save-draft>임시 저장하기</button><button class="btn" type="submit">상품 등록하기</button></div>
+</form>
+{% endblock %}

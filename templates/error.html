@@ -1,0 +1,4 @@
+{% extends "index.html" %}
+{% block content %}
+<section class="white-card empty-state"><h2>{{ message }}</h2><div class="button-row"><button class="btn btn-white" type="button" data-go-back>이전 화면으로</button><a class="btn" href="{{ url_for('hello') }}">메인으로</a></div></section>
+{% endblock %}

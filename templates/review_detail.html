@@ -1,0 +1,4 @@
+{% extends "index.html" %}
+{% block content %}
+<div class="review-page">{{ review_product(product) }}<article class="white-card review-detail"><h2>{{ review.title }}</h2><div class="review-meta small"><span>{{ review.author }}</span><time>{{ review.date }}</time></div><dl class="detail-grid"><dt>평점</dt><dd class="rating-row"><span class="stars" aria-label="{{ review.rating }}점">{{ '★' * review.rating }}{{ '☆' * (5-review.rating) }}</span><strong>{{ '%.1f'|format(review.rating) }}</strong><span class="muted small">{{ '아주 만족해요' if review.rating==5 else '소중한 후기예요' }}</span></dd><dt>리뷰 사진</dt><dd><div class="photo-pair">{{ photo(review.image,'light','리뷰 사진') }}{{ photo('', 'dark', '추가 리뷰 사진') }}</div></dd><dt>리뷰 상세</dt><dd class="preserve-lines">{{ review.description }}</dd></dl><a class="detail-link" href="{{ url_for('view_review') }}">리뷰 목록으로 {{ icon('arrow') }}</a></article></div>
+{% endblock %}

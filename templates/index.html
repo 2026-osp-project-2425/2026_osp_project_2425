@@ -1,59 +1,92 @@
-{% macro navigation(class_name="navigation") %}
-<div class="{{ class_name }}">
-    <a class="product-list2"
-       href="{{ url_for('view_list') }}">
-        PRODUCT LIST
-    </a>
+{% macro icon(name, label="") -%}
+<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" {% if label %}role="img" aria-label="{{ label }}"{% else %}aria-hidden="true"{% endif %}>
+{% if name == 'search' %}<circle cx="10" cy="10" r="6"></circle><path d="m15 15 5 5"></path>
+{% elif name == 'cart' %}<path d="M2 3h3l3 13h11l3-9H6"></path><circle cx="9" cy="21" r="1"></circle><circle cx="19" cy="21" r="1"></circle>
+{% elif name == 'eye' %}<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"></path><circle cx="12" cy="12" r="3"></circle>
+{% elif name == 'plus' %}<path d="M12 4v16M4 12h16"></path>
+{% elif name == 'menu' %}<path d="M3 6h18M3 12h18M3 18h18"></path>
+{% else %}<path d="M4 12h16m-6-6 6 6-6 6"></path>{% endif %}
+</svg>
+{%- endmacro %}
 
-    <a class="product-registration2"
-       href="{{ url_for('reg_item') }}">
-        PRODUCT REGISTRATION
-    </a>
-
-    <a class="review-list"
-       href="{{ url_for('view_review') }}">
-        REVIEW LIST
-    </a>
-
-    <a class="review-writing2"
-       href="{{ url_for('reg_review') }}">
-        REVIEW WRITING
-    </a>
-
-    <a class="login-logout2"
-       href="{{ url_for('login') }}">
-        LOGIN/LOGOUT
-    </a>
+{% macro photo(src="", shade="light", label="상품 사진") -%}
+<div class="photo-slot {{ shade }}" {% if not src %}role="img" aria-label="{{ label }} 자리"{% endif %}>
+{% if src %}<img src="{{ url_for('static', filename=src) }}" alt="{{ label }}">{% else %}<span class="sr-only">{{ label }} 자리</span>{% endif %}
 </div>
-{% endmacro %}
+{%- endmacro %}
+
+{% macro navigation() -%}
+<nav class="navigation" aria-label="주요 페이지">
+{% for endpoint, text, key in [('view_list','PRODUCT LIST','list'),('reg_item','PRODUCT REGISTRATION','registration'),('view_review','REVIEW LIST','review'),('reg_review','REVIEW WRITING','writing'),('login','LOGIN/LOGOUT','login')] %}
+<a href="{{ url_for(endpoint) }}" class="{{ 'active' if active == key else '' }}" {% if active == key %}aria-current="page"{% endif %}>{{ text }}</a>
+{% endfor %}
+</nav>
+{%- endmacro %}
+
+{% macro pagination(endpoint) -%}
+{% if pages > 1 %}<nav class="pagination" aria-label="페이지 선택">
+{% if current_page > 1 %}<a href="{{ url_for(endpoint, page=current_page-1, q=request.args.get('q',''), sort=request.args.get('sort',''), category=request.args.get('category',''), product_id=request.args.get('product_id','')) }}" aria-label="이전 페이지">‹</a>{% else %}<span aria-disabled="true">‹</span>{% endif %}
+{% for number in range(1,pages+1) %}<a href="{{ url_for(endpoint, page=number, q=request.args.get('q',''), sort=request.args.get('sort',''), category=request.args.get('category',''), product_id=request.args.get('product_id','')) }}" class="{{ 'selected' if number == current_page else '' }}" {% if number == current_page %}aria-current="page"{% endif %}>{{ number }}</a>{% endfor %}
+{% if current_page < pages %}<a href="{{ url_for(endpoint, page=current_page+1, q=request.args.get('q',''), sort=request.args.get('sort',''), category=request.args.get('category',''), product_id=request.args.get('product_id','')) }}" aria-label="다음 페이지">›</a>{% else %}<span aria-disabled="true">›</span>{% endif %}
+</nav>{% endif %}
+{%- endmacro %}
+
+{% macro product_listing() -%}
+<div class="two-column list-layout">
+<section class="list-main">
+    <div class="list-toolbar"><h2>판매 중인 상품 <span class="count-badge">{{ product_count }}</span></h2>
+        <form method="get" action="{{ url_for('view_list') }}"><input type="hidden" name="q" value="{{ query }}"><input type="hidden" name="category" value="{{ category }}"><label class="sr-only" for="sort">정렬</label><select id="sort" name="sort" data-auto-submit><option value="popular" {{ 'selected' if sort == 'popular' }}>인기순</option><option value="latest" {{ 'selected' if sort == 'latest' }}>최신순</option><option value="price" {{ 'selected' if sort == 'price' }}>낮은 가격순</option></select><button class="sr-only" type="submit">정렬 적용</button></form>
+    </div>
+    {% if query or category %}<p class="filter-summary">{{ query or category }} 검색 결과 <a href="{{ url_for('view_list') }}">전체 보기</a></p>{% endif %}
+    <div class="card-stack">
+    {% for p in products %}
+    <article class="product-card white-card">
+        <a class="card-photo" href="{{ url_for('product_detail', id=p.id) }}" aria-label="{{ p.name }} 상세 보기">{{ photo(p.image) }}</a>
+        <div class="card-body"><p class="eyebrow">{{ p.seller_id }} / {{ p.manufacturer or '공동구매' }}</p><h3><a href="{{ url_for('product_detail', id=p.id) }}">{{ p.name }}</a></h3>
+        {% set target = p.target_count|default('40', true)|int %}{% set progress = ([100, p.participants*100/(target or 40)]|min)|int %}
+        <p class="muted small">공동구매 목표치 {{ progress }}% 달성!<br>참여 인원 {{ p.participants }}명 / 목표 {{ target or 40 }}명</p>
+        <progress value="{{ progress }}" max="100" aria-label="공동구매 진행률">{{ progress }}%</progress>
+        <div class="card-footer"><strong class="price">{{ p.price|won }}원</strong><a class="detail-link" href="{{ url_for('product_detail', id=p.id) }}">자세히 보기 {{ icon('arrow') }}</a></div>
+        </div>
+    </article>
+    {% else %}<div class="white-card empty-state"><p>조건에 맞는 상품이 없습니다.</p><a class="btn" href="{{ url_for('reg_item') }}">상품 등록하기</a></div>{% endfor %}
+    </div>
+    {{ pagination('view_list') }}
+</section>
+<aside class="right-rail"><section class="green-panel"><h3>실시간 상품 랭킹</h3><hr><div class="chips">{% for tag in ['생활 · 패션','식품','기타'] %}<a class="chip" href="{{ url_for('view_list', category=tag) }}">{{ tag }}</a>{% endfor %}</div><ol class="rank-list">{% for p in ranking %}<li><span>{{ loop.index }}</span><a href="{{ url_for('product_detail',id=p.id) }}"><small>{{ p.seller_id }} / {{ p.manufacturer }}</small><strong>{{ p.name }}</strong></a></li>{% endfor %}</ol><p class="small center">공동구매 참여 인원 기준</p></section><button class="btn btn-white" type="button" data-focus-search>상품 검색하기</button></aside>
+</div>
+{%- endmacro %}
+
+{% macro review_product(p, selectable=false) -%}
+<section class="green-panel review-product-banner">
+    <div class="banner-photo"><strong>{{ '리뷰 작성 중인 상품' if selectable else '리뷰한 상품' }}</strong>{{ photo(p.image) }}</div>
+    <div class="banner-content"><p class="soft-text">{{ p.seller_id }} 님의 공동구매로 함께한 상품이에요.</p><div class="banner-name"><span class="chip">{{ p.category or '생활 · 패션' }}</span><h2>{{ p.name }}</h2><span>블랙/M</span></div><div class="button-row">{% if selectable %}<a class="btn btn-white" href="{{ url_for('account') }}">구매 내역 확인하기</a><a class="btn btn-white" href="{{ url_for('view_review', product_id=p.id) }}">다른 리뷰 확인하기</a>{% else %}<a class="btn btn-white" href="{{ url_for('product_detail',id=p.id) }}">상품 확인하기</a>{% endif %}</div></div>
+</section>
+{%- endmacro %}
 
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0">
-
-    <title>{% block title %}이화 공동구매 플랫폼{% endblock %}</title>
-
-    <link rel="stylesheet"
-          href="{{ url_for('static', filename='css/' ~ css_file) }}">
-
-    <link rel="stylesheet"
-          href="{{ url_for('static', filename='css/common.css') }}">
-
-    {% block extra_css %}{% endblock %}
-
-    <script src="{{ url_for('static', filename='main.js') }}"
-            defer></script>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ page_title }} | 이화 공동구매</title>
+    <link rel="stylesheet" href="{{ url_for('static',filename='css/common.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static',filename='css/' ~ css_file) }}">
+    <script src="{{ url_for('static',filename='main.js') }}" defer></script>
 </head>
 <body>
-    {% block section %}
-    <main class="site-home">
-        <h1>이화인을 위한 간편 공동구매 플랫폼</h1>
-        {{ navigation() }}
-        <p>상품과 리뷰를 확인하거나 상품 등록을 진행해 주세요.</p>
+<div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+        <div class="profile"><a class="avatar" href="{{ url_for('account') }}" aria-label="마이페이지"></a><strong>{{ user.username if user else 'User' }}</strong>{% if user %}<form action="{{ url_for('logout') }}" method="post"><button class="pill" type="submit">Logout</button></form>{% else %}<a class="pill" href="{{ url_for('login') }}">Login</a>{% endif %}</div>
+        <nav class="side-menu" aria-label="사이드 메뉴"><h2>Menu</h2>{% for endpoint,text,key in [('reg_item','Product Registration','registration'),('view_list','Product List','list'),('cart','Cart','cart'),('reg_review','Review Writing','writing')] %}<a href="{{ url_for(endpoint) }}" class="{{ 'active' if active==key else '' }}">{{ text }}<span aria-hidden="true">▹</span></a>{% endfor %}<h2>My Page</h2>{% for endpoint,text,key in [('signup','Signup','signup'),('login','Login/Logout','login'),('account','Account','account')] %}<a href="{{ url_for(endpoint) }}">{{ text }}<span aria-hidden="true">▹</span></a>{% endfor %}</nav>
+        <a class="home-link" href="{{ url_for('hello') }}">이화 공동구매 · HOME</a>
+    </aside>
+    <main class="main-content">
+        <header class="site-header"><div class="topbar"><button class="mobile-menu icon-button" type="button" aria-label="메뉴 열기" aria-expanded="false" aria-controls="sidebar">{{ icon('menu') }}</button><form class="search-bar" action="{{ url_for('view_list') }}" method="get"><button type="submit" class="icon-button" aria-label="상품 검색">{{ icon('search') }}</button><label class="sr-only" for="global-search">상품 검색</label><input id="global-search" name="q" value="{{ request.args.get('q','') }}" placeholder="상품 검색" autocomplete="off"></form><a class="cart-button" href="{{ url_for('cart') }}" aria-label="장바구니">{{ icon('cart') }}{% if cart_count %}<span class="cart-count">{{ cart_count }}</span>{% endif %}</a></div>{{ navigation() }}</header>
+        {% with messages=get_flashed_messages(with_categories=true) %}{% for category,message in messages %}<div class="notice {{ category }}" role="status">{{ message }}<button type="button" data-dismiss aria-label="알림 닫기">×</button></div>{% endfor %}{% endwith %}
+        <div class="page-heading"><span class="section-badge">{{ badge }}</span><h1>{{ page_title }}</h1></div>
+        {% block content %}{{ product_listing() }}{% endblock %}
     </main>
-    {% endblock %}
+</div>
+<dialog id="help-dialog"><form method="dialog"><button class="dialog-close" aria-label="닫기">×</button></form><h2>계정 찾기 안내</h2><p id="help-text"></p><a class="btn" href="{{ url_for('signup') }}">회원가입 화면으로</a></dialog>
 </body>
 </html>

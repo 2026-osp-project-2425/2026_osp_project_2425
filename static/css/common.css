@@ -143,3 +143,35 @@ dialog p { margin:16px 0 24px; }
 @media(max-width:1000px) { .two-column { grid-template-columns:minmax(0,1fr); } .right-rail { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); align-items:start; } .detail-layout>.right-rail { display:block; } .review-product-banner { grid-template-columns:140px minmax(0,1fr); gap:18px; } .banner-name h2 { font-size:21px; } .form-grid { grid-template-columns:125px minmax(0,1fr); gap:18px; } .date-group { flex-wrap:wrap; } .date-group input { flex-basis:130px; } }
 @media(max-width:760px) { .app-shell { display:block; width:calc(100% - 28px); margin:14px auto; } .sidebar { display:none; position:fixed; left:14px; top:14px; width:240px; height:calc(100dvh - 28px); min-height:0; z-index:20; box-shadow:0 0 0 100vmax #0005; } .sidebar.open { display:flex; } .mobile-menu { display:inline-flex; background:var(--black); color:#fff; height:48px; } .topbar { gap:8px; } .search-bar { height:48px; padding:0 8px; } .cart-button { width:56px; height:48px; } .navigation { gap:12px 18px; } .site-header { margin-bottom:24px; } .white-card { padding:20px; } .form-card { padding:20px; } .form-grid { grid-template-columns:110px minmax(0,1fr); gap:16px 12px; } .form-actions .btn { min-width:0; flex:1; } .review-product-banner { padding:20px; } }
 @media(max-width:480px) { .form-grid,.detail-grid { grid-template-columns:minmax(0,1fr); gap:10px; } .form-grid>label,.detail-grid dt { padding-top:12px; } .form-grid>label:first-child { padding-top:0; } .right-rail { display:flex; } .review-product-banner { grid-template-columns:1fr; } .banner-photo .photo-slot { width:140px; } .button-row .btn { flex-basis:100%; } .photo-slot { width:130px; } .list-toolbar h2 { font-size:18px; } .count-badge { margin-left:5px; padding:5px 10px; } .list-toolbar select { width:112px; } .title-input { font-size:24px; } }
+
+.site-header .topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 18px;
+}
+
+.header-left {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.header-right .search-bar {
+    width: 240px;
+    flex: initial;
+}
+
+.site-header .page-heading {
+    margin-bottom: 0;
+}
+
+.site-header .navigation {
+    padding: 0;
+}

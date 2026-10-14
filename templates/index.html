@@ -81,9 +81,20 @@
         <a class="home-link" href="{{ url_for('hello') }}">이화 공동구매 · HOME</a>
     </aside>
     <main class="main-content">
-        <header class="site-header"><div class="topbar"><button class="mobile-menu icon-button" type="button" aria-label="메뉴 열기" aria-expanded="false" aria-controls="sidebar">{{ icon('menu') }}</button><form class="search-bar" action="{{ url_for('view_list') }}" method="get"><button type="submit" class="icon-button" aria-label="상품 검색">{{ icon('search') }}</button><label class="sr-only" for="global-search">상품 검색</label><input id="global-search" name="q" value="{{ request.args.get('q','') }}" placeholder="상품 검색" autocomplete="off"></form><a class="cart-button" href="{{ url_for('cart') }}" aria-label="장바구니">{{ icon('cart') }}{% if cart_count %}<span class="cart-count">{{ cart_count }}</span>{% endif %}</a></div>{{ navigation() }}</header>
+        <header class="site-header">
+            <div class="topbar">
+                <button class="mobile-menu icon-button" type="button" aria-label="메뉴 열기" aria-expanded="false" aria-controls="sidebar">{{ icon('menu') }}</button>
+                <div class="header-left">
+                    <div class="page-heading"><span class="section-badge">{{ badge }}</span><h1>{{ page_title }}</h1></div>
+                    {{ navigation() }}
+                </div>
+                <div class="header-right">
+                    <form class="search-bar" action="{{ url_for('view_list') }}" method="get"><button type="submit" class="icon-button" aria-label="상품 검색">{{ icon('search') }}</button><label class="sr-only" for="global-search">상품 검색</label><input id="global-search" name="q" value="{{ request.args.get('q','') }}" placeholder="상품 검색" autocomplete="off"></form>
+                    <a class="cart-button" href="{{ url_for('cart') }}" aria-label="장바구니">{{ icon('cart') }}{% if cart_count %}<span class="cart-count">{{ cart_count }}</span>{% endif %}</a>
+                </div>
+            </div>
+        </header>
         {% with messages=get_flashed_messages(with_categories=true) %}{% for category,message in messages %}<div class="notice {{ category }}" role="status">{{ message }}<button type="button" data-dismiss aria-label="알림 닫기">×</button></div>{% endfor %}{% endwith %}
-        <div class="page-heading"><span class="section-badge">{{ badge }}</span><h1>{{ page_title }}</h1></div>
         {% block content %}{{ product_listing() }}{% endblock %}
     </main>
 </div>

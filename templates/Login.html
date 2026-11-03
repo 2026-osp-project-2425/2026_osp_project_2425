@@ -1,4 +1,13 @@
 {% extends "index.html" %}
 {% block content %}
-<div class="two-column login-layout"><form class="green-panel login-panel" action="{{ url_for('login') }}" method="post"><h2>LOGIN</h2><hr><div class="login-fields"><label for="username">ID</label><input id="username" name="username" placeholder="input ID" autocomplete="username" required><label for="password">PW</label><div class="password-field"><input type="password" id="password" name="password" placeholder="input PW" autocomplete="current-password" required><button class="icon-button" type="button" data-toggle-password="password" aria-label="비밀번호 보기">{{ icon('eye') }}</button></div></div><button class="btn btn-white" type="submit">로그인</button></form><aside class="right-rail"><button class="btn btn-white" type="button" data-help="회원가입 때 입력한 ID로 로그인해 주세요. 이 실습에는 이메일 발송을 통한 ID 찾기 기능이 연결되어 있지 않습니다.">아이디 찾기</button><button class="btn btn-white" type="button" data-help="이 실습에는 이메일 발송을 통한 비밀번호 재설정 기능이 연결되어 있지 않습니다. 다른 ID로 실습용 계정을 새로 만들 수 있습니다.">비밀번호 찾기</button>{% if user %}<form action="{{ url_for('logout') }}" method="post"><button class="btn full" type="submit">로그아웃</button></form>{% else %}<a class="btn" href="{{ url_for('signup') }}">회원가입</a>{% endif %}</aside></div>
+<div class="centered-form login-wrap">
+    <form class="login-card" action="{{ url_for('login') }}" method="post">
+        <input type="hidden" name="next" value="{{ request.values.get('next', '') }}">
+        <label class="field" for="username">아이디<input id="username" name="username" placeholder="아이디를 입력하세요" autocomplete="username" required></label>
+        <div class="field"><label for="password">비밀번호</label><div class="password-field"><input type="password" id="password" name="password" placeholder="비밀번호를 입력하세요" autocomplete="current-password" required><button class="icon-button" type="button" data-toggle-password="password" aria-label="비밀번호 보기">{{ icon('eye') }}</button></div></div>
+        <button class="btn login-submit" type="submit">로그인</button>
+        <div class="login-help"><button type="button" data-help="회원가입 때 입력한 ID로 로그인해 주세요. 이 실습에는 이메일 발송을 통한 ID 찾기 기능이 연결되어 있지 않습니다.">아이디 찾기</button><span aria-hidden="true">·</span><button type="button" data-help="이 실습에는 이메일 발송을 통한 비밀번호 재설정 기능이 연결되어 있지 않습니다. 다른 ID로 실습용 계정을 새로 만들 수 있습니다.">비밀번호 찾기</button></div>
+    </form>
+    {% if user %}<form action="{{ url_for('logout') }}" method="post"><button class="btn btn-white full login-alt" type="submit">로그아웃</button></form>{% else %}<a class="btn btn-white login-alt" href="{{ url_for('signup') }}">아직 계정이 없나요? 회원가입</a>{% endif %}
+</div>
 {% endblock %}

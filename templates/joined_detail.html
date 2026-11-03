@@ -1,0 +1,85 @@
+{% extends "index.html" %}
+{% block header %}
+<header class="back-header">
+    <div><a class="back-to" href="{{ url_for('account') }}">← 내가 참여한 공동구매</a><h1>{{ page_title }}</h1></div>
+</header>
+{% endblock %}
+{% block content %}
+{% set f = state %}
+<div class="joined-stack">
+    <section class="panel joined-summary">
+        <div class="joined-photo">{% if product.image %}<img src="{{ url_for('static', filename=product.image) }}" alt="{{ product.name }} 사진">{% else %}상품 사진{% endif %}</div>
+        <div class="joined-info">
+            <span class="joined-tags">{% if not f.closed %}<span class="status-chip active">진행 중</span>{% if f.left is not none %}<span class="status-chip urgent">{{ 'D-DAY' if f.left == 0 else 'D-' ~ f.left }}</span>{% endif %}
+                {%- elif f.cancelled %}<span class="status-chip off">목표 미달 · 공동구매 취소</span>
+                {%- else %}<span class="status-chip done">구매 확정</span>{% endif %}</span>
+            <b class="joined-name">{{ product.name }}</b>
+            {% if product.description %}<span class="joined-desc">{{ product.description|truncate(60, true, '…') }}</span>{% endif %}
+            <dl class="kv">
+                <div><dt>진행자</dt><dd>{{ product.seller_id }}</dd></div>
+                <div><dt>진행 기간</dt><dd>{{ product.start_date|kdate or '시작일 미정' }} ~ {{ product.end_date|kdate or '마감일 미정' }}</dd></div>
+                <div><dt>목표 인원</dt><dd>{{ f.target ~ '명' if f.target else '미정' }}</dd></div>
+                <div><dt>가격</dt><dd class="joined-price">{{ product.price|won }}원</dd></div>
+            </dl>
+            {% if product.chat_url %}
+            <div class="chat-strip">
+                <span class="chat-badge">{{ icon('chat') }}</span>
+                <span class="chat-strip-text"><span>참여자 전용 · 진행자 오픈채팅방</span><span>{{ product.chat_url }}</span></span>
+                <a href="{{ product.chat_url }}" target="_blank" rel="noopener noreferrer">입장하기 ↗</a>
+            </div>
+            {% endif %}
+        </div>
+        <div class="joined-status">
+            <b>공동구매 진행 현황</b>
+            <div class="joined-count"><span>참여 <b>{{ f.participants }}명</b>{% if f.target %} / 목표 {{ f.target }}명{% endif %}</span>{% if f.target %}<b>{{ f.progress }}%</b>{% endif %}</div>
+            {% if f.target %}<progress value="{{ f.progress }}" max="100" aria-label="공동구매 진행률">{{ f.progress }}%</progress>{% endif %}
+            <p>{% if f.cancelled %}마감 때 목표 인원에 못 미쳐 공동구매가 취소됐어요.
+               {% elif f.closed %}목표 인원을 채워 공동구매가 확정됐어요. 수령 안내를 확인해 주세요.
+               {% elif f.target and f.remaining %}💡 목표 인원까지 <b>{{ f.remaining }}명</b> 남았어요! 마감 전까지 주변 이화인에게도 공유해보세요.
+               {% else %}🎉 목표 인원을 채웠어요! 마감까지 더 참여할 수 있어요.{% endif %}</p>
+            <button class="line-btn" type="button" data-share="{{ url_for('product_detail', id=product.id, _external=true) }}" data-share-title="{{ product.name }}">↗ 공유하기</button>
+            <p class="share-status" data-share-status aria-live="polite"></p>
+        </div>
+    </section>
+
+    <section class="panel">
+        <div class="panel-row"><h2 class="panel-title">내 주문 정보</h2>
+            {% if not f.closed %}<span class="status-chip active">주문 상태 · 진행 중</span>{% elif f.cancelled %}<span class="status-chip off">주문 상태 · 취소</span>{% else %}<span class="status-chip done">주문 상태 · 구매 확정</span>{% endif %}</div>
+        <div class="order-line">
+            {{ thumb(product.image) }}
+            <div><b>{{ product.name }}</b><span>{% if order|option %}옵션 {{ order|option }} · {% endif %}수량 {{ order.quantity }}개 · 주문 번호 {{ order|order_number }}</span></div>
+            <b>{{ (product.price|int * order.quantity)|won }}원</b>
+        </div>
+        <dl class="kv">
+            <div><dt>수령 일시</dt><dd>{{ pickup_text }}</dd></div>
+            <div><dt>수령 장소</dt><dd>{{ product.address }}</dd></div>
+        </dl>
+        {% if review %}<a class="line-btn align-end" href="{{ url_for('review_detail', id=review.id) }}">☆ 내 리뷰 보기</a>
+        {% elif f.received %}<a class="fill-btn align-end" href="{{ url_for('reg_review', product_id=product.id) }}">리뷰 작성하기</a>{% endif %}
+    </section>
+
+    <section class="panel">
+        <h2 class="panel-title">진행 일정</h2>
+        {% if steps %}{{ step_list(steps) }}{% else %}<p class="steps-note">목표 인원 미달로 공동구매가 취소되어 이후 일정이 진행되지 않아요.</p>{% endif %}
+    </section>
+
+    <section class="panel news-panel">
+        <nav class="sub-tabs" aria-label="상품 소식">
+            {% for key,text in [('notice','공지사항'),('people','참여자 현황'),('contact','문의')] %}<a class="{{ 'on' if tab == key else '' }}" href="{{ url_for('joined_detail', order_id=order.id, tab=none if key == 'notice' else key) }}" {% if tab == key %}aria-current="page"{% endif %}>{{ text }}{% if key == 'people' %} <small>{{ f.participants }}명</small>{% elif key == 'notice' and product.notices %} <small>{{ product.notices|length }}</small>{% endif %}</a>{% endfor %}
+        </nav>
+        {% if tab == 'notice' %}
+            {% for n in product.notices|default([])|sort(attribute='id', reverse=true)|sort(attribute='important', reverse=true) %}
+            <div class="news-row {{ 'pinned' if n.important else '' }}">{% if n.important %}<span aria-hidden="true">📌</span><span class="status-chip active">중요</span><b>{{ n.title }}</b>{% else %}<span class="status-chip off">안내</span><span>{{ n.title }}</span>{% endif %}<span class="news-date">{{ n.date }}</span></div>
+            {% else %}<p class="news-empty">아직 등록된 공지사항이 없어요. 진행자가 공지를 올리면 여기에 보여요.</p>{% endfor %}
+        {% elif tab == 'people' %}
+            <p class="news-lead">지금까지 <b>{{ f.participants }}명</b>이 참여했어요{% if f.target %} (목표 {{ f.target }}명){% endif %}. 다른 참여자의 이름은 공개되지 않아요.</p>
+            {% for o in options %}<div class="news-row"><span>{{ o.option }}</span><span class="news-date">{{ o.quantity }}개</span></div>
+            {% else %}<p class="news-empty">이 사이트에서 기록된 옵션별 주문이 아직 없어요.</p>{% endfor %}
+        {% else %}
+            <p class="news-lead">상품이나 수령에 대한 문의는 진행자에게 직접 해 주세요.</p>
+            <div class="news-row"><span class="status-chip off">이메일</span><a href="mailto:{{ product.email }}">{{ product.email }}</a></div>
+            {% if product.chat_url %}<div class="news-row"><span class="status-chip off">오픈채팅</span><a href="{{ product.chat_url }}" target="_blank" rel="noopener noreferrer">진행자 오픈채팅방 입장하기 ↗</a></div>{% endif %}
+        {% endif %}
+    </section>
+</div>
+{% endblock %}

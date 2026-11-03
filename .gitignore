@@ -1,0 +1,22 @@
+# 로컬 실행 데이터: DB와 세션 비밀키는 저장소에 올리지 않는다.
+instance/
+
+# 비밀값을 담는 환경변수 파일
+.env
+
+# 가상환경과 파이썬 캐시
+.venv/
+__pycache__/
+
+# 사용자가 올린 사진
+static/images/uploads/
+
+#Firebase 인증키
+authentication/
+# Firebase private key and practice installer
+venv/
+apply_firebase.py
+firebase_patch/
+
+authentication/
+venv/

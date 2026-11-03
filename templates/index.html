@@ -1,10 +1,16 @@
 {% macro icon(name, label="") -%}
 <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" {% if label %}role="img" aria-label="{{ label }}"{% else %}aria-hidden="true"{% endif %}>
-{% if name == 'search' %}<circle cx="10" cy="10" r="6"></circle><path d="m15 15 5 5"></path>
-{% elif name == 'cart' %}<path d="M2 3h3l3 13h11l3-9H6"></path><circle cx="9" cy="21" r="1"></circle><circle cx="19" cy="21" r="1"></circle>
+{% if name == 'search' %}<circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path>
+{% elif name == 'cart' %}<path d="M3 4h2l2.4 11h11l2-8H6.2"></path><circle cx="9" cy="20" r="1.5"></circle><circle cx="18" cy="20" r="1.5"></circle>
 {% elif name == 'eye' %}<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"></path><circle cx="12" cy="12" r="3"></circle>
-{% elif name == 'plus' %}<path d="M12 4v16M4 12h16"></path>
-{% elif name == 'menu' %}<path d="M3 6h18M3 12h18M3 18h18"></path>
+{% elif name == 'lock' %}<rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path>
+{% elif name == 'bag' %}<path d="M5 8h14l-1 12H6L5 8z"></path><path d="M9 8V6a3 3 0 0 1 6 0v2"></path>
+{% elif name == 'store' %}<path d="M4 9l1.5-5h13L20 9"></path><path d="M4 9h16v2a2.5 2.5 0 0 1-5 0 2.5 2.5 0 0 1-5 0 2.5 2.5 0 0 1-5 0"></path><path d="M5 12v8h14v-8"></path><path d="M10 20v-5h4v5"></path>
+{% elif name == 'chat' %}<path fill="currentColor" stroke="none" d="M12 4C7 4 3 7.1 3 11c0 2.5 1.7 4.7 4.2 5.9L6.4 20l3.6-2.3c.6.1 1.3.2 2 .2 5 0 9-3.1 9-7s-4-6.9-9-6.9z"></path>
+{% elif name == 'link' %}<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"></path><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"></path>
+{% elif name == 'megaphone' %}<path d="M4 10v4h3l6 4V6L7 10H4z"></path><path d="M17 9a4 4 0 0 1 0 6"></path>
+{% elif name == 'download' %}<path d="M12 4v11"></path><path d="M7 10l5 5 5-5"></path><path d="M5 20h14"></path>
+{% elif name == 'check' %}<path d="M5 12.5l4.5 4.5L19 7.5"></path>
 {% else %}<path d="M4 12h16m-6-6 6 6-6 6"></path>{% endif %}
 </svg>
 {%- endmacro %}
@@ -15,53 +21,111 @@
 </div>
 {%- endmacro %}
 
-{% macro navigation() -%}
-<nav class="navigation" aria-label="주요 페이지">
-{% for endpoint, text, key in [('view_list','PRODUCT LIST','list'),('reg_item','PRODUCT REGISTRATION','registration'),('view_review','REVIEW LIST','review'),('reg_review','REVIEW WRITING','writing'),('login','LOGIN/LOGOUT','login')] %}
-<a href="{{ url_for(endpoint) }}" class="{{ 'active' if active == key else '' }}" {% if active == key %}aria-current="page"{% endif %}>{{ text }}</a>
-{% endfor %}
-</nav>
+{% macro thumb(src, text="사진") -%}
+<div class="thumb">{% if src %}<img src="{{ url_for('static', filename=src) }}" alt="">{% else %}{{ text }}{% endif %}</div>
+{%- endmacro %}
+
+{% macro dday(left, short=false) -%}
+{% if left is none %}{% elif left < 0 %}<span class="dday closed">마감</span>
+{%- elif left == 0 %}<span class="dday">{{ 'D-DAY 마감임박' if short else 'D-DAY 오늘 마감' }}</span>
+{%- elif left <= 3 %}<span class="dday">D-{{ left }} {{ '마감임박' if short else '마감 임박' }}</span>
+{%- elif not short %}<span class="dday open">D-{{ left }}</span>{% endif %}
+{%- endmacro %}
+
+{% macro stars(score, label="별점") -%}
+{% set filled = score|round|int %}<span class="stars" role="img" aria-label="{{ label }} {{ '%.1f'|format(score) }}점">{{ '★' * filled }}<span class="star-off">{{ '★' * (5 - filled) }}</span></span>
+{%- endmacro %}
+
+{% macro product_banner(p, note) -%}
+{% set f = p|funding %}
+<section class="product-banner">
+    {{ thumb(p.image) }}
+    <div class="banner-body">
+        <p class="banner-note">{{ note }}</p>
+        <div class="banner-name"><b>{{ p.name }}</b><span class="chip">{{ p.category or '생활 · 패션' }}</span></div>
+        <p class="banner-note">{{ p.seller_id }} 님의 공동구매{% if p.end_date %} · {{ p.end_date|replace('-','.') }} 마감{% endif %}{% if f.target %} · {% if f.confirmed %}목표 달성{% elif f.cancelled %}목표 미달{% else %}진행 중{% endif %} {{ f.participants }} / {{ f.target }}명{% endif %}</p>
+    </div>
+    <a class="detail-link" href="{{ url_for('product_detail', id=p.id) }}">상품 보러가기 →</a>
+</section>
+{%- endmacro %}
+
+{% macro step_list(steps, notes=true) -%}
+<ol class="steps">{% for s in steps %}<li class="{{ s.state }}" {% if s.state == 'cur' %}aria-current="step"{% endif %}><i>{{ '✓' if s.state == 'done' else loop.index }}</i><span>{{ s.label }}</span>{% if notes and s.note %}<small>{{ s.note }}</small>{% endif %}</li>{% endfor %}</ol>
 {%- endmacro %}
 
 {% macro pagination(endpoint) -%}
 {% if pages > 1 %}<nav class="pagination" aria-label="페이지 선택">
-{% if current_page > 1 %}<a href="{{ url_for(endpoint, page=current_page-1, q=request.args.get('q',''), sort=request.args.get('sort',''), category=request.args.get('category',''), product_id=request.args.get('product_id','')) }}" aria-label="이전 페이지">‹</a>{% else %}<span aria-disabled="true">‹</span>{% endif %}
-{% for number in range(1,pages+1) %}<a href="{{ url_for(endpoint, page=number, q=request.args.get('q',''), sort=request.args.get('sort',''), category=request.args.get('category',''), product_id=request.args.get('product_id','')) }}" class="{{ 'selected' if number == current_page else '' }}" {% if number == current_page %}aria-current="page"{% endif %}>{{ number }}</a>{% endfor %}
-{% if current_page < pages %}<a href="{{ url_for(endpoint, page=current_page+1, q=request.args.get('q',''), sort=request.args.get('sort',''), category=request.args.get('category',''), product_id=request.args.get('product_id','')) }}" aria-label="다음 페이지">›</a>{% else %}<span aria-disabled="true">›</span>{% endif %}
+{% set args = dict(q=request.args.get('q',''), sort=request.args.get('sort',''), category=request.args.get('category',''), product_id=request.args.get('product_id',''), status=request.args.get('status','')) %}
+{% if current_page > 1 %}<a class="pill" href="{{ url_for(endpoint, page=current_page-1, **args) }}" aria-label="이전 페이지">‹</a>{% else %}<span class="pill" aria-disabled="true">‹</span>{% endif %}
+{% for number in range(1,pages+1) %}<a href="{{ url_for(endpoint, page=number, **args) }}" class="pill {{ 'on' if number == current_page else '' }}" {% if number == current_page %}aria-current="page"{% endif %}>{{ number }}</a>{% endfor %}
+{% if current_page < pages %}<a class="pill" href="{{ url_for(endpoint, page=current_page+1, **args) }}" aria-label="다음 페이지">›</a>{% else %}<span class="pill" aria-disabled="true">›</span>{% endif %}
 </nav>{% endif %}
+{%- endmacro %}
+
+{% macro open_card(p) -%}
+{% set f = p|funding %}
+<article class="product-card white-card">
+    <a class="product-photo" href="{{ url_for('product_detail', id=p.id) }}" aria-label="{{ p.name }} 상세 보기">{% if p.image %}<img src="{{ url_for('static', filename=p.image) }}" alt="">{% else %}상품 사진{% endif %}</a>
+    <div class="product-tags">{{ dday(f.left, true) }}<span class="chip">{{ p.category or '생활 · 패션' }}</span></div>
+    <p class="eyebrow">{{ p.seller_id }} · {{ p.manufacturer or '미정' }}</p>
+    <h3><a href="{{ url_for('product_detail', id=p.id) }}">{{ p.name }}</a></h3>
+    <p class="price">{{ p.price|won }}<span>원</span></p>
+    <div class="product-funding">{% if not f.participants %}<b class="waiting">첫 참여자를 기다려요</b>{% elif f.target %}<b>{{ f.progress }}% 달성</b>{% else %}<b>{{ f.participants }}명 참여</b>{% endif %}<span>{% if f.target %}{{ f.participants }} / {{ f.target }}명{% else %}목표 인원 미정{% endif %}</span></div>
+    {% if f.target %}<progress value="{{ f.progress }}" max="100" aria-label="공동구매 진행률">{{ f.progress }}%</progress>{% endif %}
+    <a class="detail-link" href="{{ url_for('product_detail', id=p.id) }}">자세히 보기 →</a>
+</article>
+{%- endmacro %}
+
+{% macro closed_card(p) -%}
+{% set f = p|funding %}{% set stats = review_stats.get(p.id) %}
+<article class="product-card white-card closed-card">
+    <a class="product-photo" href="{{ url_for('product_detail', id=p.id) }}" aria-label="{{ p.name }} 상세 보기">{% if p.image %}<img src="{{ url_for('static', filename=p.image) }}" alt="">{% else %}상품 사진{% endif %}<span class="closed-mark">마감</span></a>
+    <div class="product-tags"><span class="chip">{{ p.category or '생활 · 패션' }}</span></div>
+    <p class="eyebrow">{{ p.seller_id }} · {{ p.manufacturer or '미정' }}</p>
+    <h3><a href="{{ url_for('product_detail', id=p.id) }}">{{ p.name }}</a></h3>
+    <div class="product-funding">{% if f.cancelled %}<b class="waiting">목표 미달 · 공동구매 취소</b>{% elif f.target %}<b>목표 달성 · 공동구매 확정</b>{% else %}<b>공동구매 마감</b>{% endif %}<span>{% if f.target %}{{ f.participants }} / {{ f.target }}명{% else %}{{ f.participants }}명 참여{% endif %}</span></div>
+    <p class="eyebrow">{{ p.end_date|replace('-','.') }} 마감</p>
+    <div class="closed-actions">
+        {% if stats %}<a class="review-button" href="{{ url_for('view_review', product_id=p.id) }}">리뷰 보기 <span class="star-on">★</span>{{ '%.1f'|format(stats.average) }} <span class="review-count">({{ stats.count }})</span></a>
+        {% elif f.cancelled %}<span class="no-review">취소되어 리뷰 없음</span>
+        {% else %}<span class="no-review">아직 리뷰가 없어요</span>{% endif %}
+        <a class="detail-link" href="{{ url_for('product_detail', id=p.id) }}">자세히 보기 →</a>
+    </div>
+</article>
 {%- endmacro %}
 
 {% macro product_listing() -%}
 <div class="two-column list-layout">
 <section class="list-main">
-    <div class="list-toolbar"><h2>판매 중인 상품 <span class="count-badge">{{ product_count }}</span></h2>
-        <form method="get" action="{{ url_for('view_list') }}"><input type="hidden" name="q" value="{{ query }}"><input type="hidden" name="category" value="{{ category }}"><label class="sr-only" for="sort">정렬</label><select id="sort" name="sort" data-auto-submit><option value="popular" {{ 'selected' if sort == 'popular' }}>인기순</option><option value="latest" {{ 'selected' if sort == 'latest' }}>최신순</option><option value="price" {{ 'selected' if sort == 'price' }}>낮은 가격순</option></select><button class="sr-only" type="submit">정렬 적용</button></form>
+    <div class="list-toolbar">
+        <nav class="status-tabs" aria-label="공동구매 상태">
+            <a class="{{ 'on' if status == 'open' else '' }}" href="{{ url_for('view_list', status='open', sort=sort, q=query or none, category=category or none) }}" {% if status == 'open' %}aria-current="true"{% endif %}>진행 중 <span>{{ open_count }}</span></a>
+            <a class="{{ 'on' if status == 'closed' else '' }}" href="{{ url_for('view_list', status='closed', sort=sort, q=query or none, category=category or none) }}" {% if status == 'closed' %}aria-current="true"{% endif %}>마감 <span>{{ closed_count }}</span></a>
+        </nav>
+        <form class="list-sort" method="get" action="{{ url_for('view_list') }}"><input type="hidden" name="status" value="{{ status }}">{% if query %}<input type="hidden" name="q" value="{{ query }}">{% endif %}{% if category %}<input type="hidden" name="category" value="{{ category }}">{% endif %}<label class="sr-only" for="list-sort">상품 정렬</label><select id="list-sort" name="sort" data-auto-submit>{% for key,text in sorts.items() %}<option value="{{ key }}" {{ 'selected' if sort == key }}>{{ text }}</option>{% endfor %}</select><button class="sr-only" type="submit">정렬 적용</button></form>
     </div>
-    {% if query or category %}<p class="filter-summary">{{ query or category }} 검색 결과 <a href="{{ url_for('view_list') }}">전체 보기</a></p>{% endif %}
-    <div class="card-stack">
+    {% if query or category %}<p class="filter-summary">{{ query or category }} 검색 결과 <a href="{{ url_for('view_list', status=status) }}">전체 보기</a></p>{% endif %}
+    {% if status == 'closed' %}
+    <div class="list-heading closed"><h2>마감된 공동구매 <span>{{ product_count }}</span></h2><p>참여한 이화인들의 리뷰를 확인해 보세요</p></div>
+    {% else %}
+    <div class="list-heading"><h2>진행 중인 공동구매 <span>{{ product_count }}</span></h2></div>
+    {% endif %}
+    <div class="product-grid">
     {% for p in products %}
-    <article class="product-card white-card">
-        <a class="card-photo" href="{{ url_for('product_detail', id=p.id) }}" aria-label="{{ p.name }} 상세 보기">{{ photo(p.image) }}</a>
-        <div class="card-body"><p class="eyebrow">{{ p.seller_id }} / {{ p.manufacturer or '공동구매' }}</p><h3><a href="{{ url_for('product_detail', id=p.id) }}">{{ p.name }}</a></h3>
-        {% set target = p.target_count|default('40', true)|int %}{% set progress = ([100, p.participants*100/(target or 40)]|min)|int %}
-        <p class="muted small">공동구매 목표치 {{ progress }}% 달성!<br>참여 인원 {{ p.participants }}명 / 목표 {{ target or 40 }}명</p>
-        <progress value="{{ progress }}" max="100" aria-label="공동구매 진행률">{{ progress }}%</progress>
-        <div class="card-footer"><strong class="price">{{ p.price|won }}원</strong><a class="detail-link" href="{{ url_for('product_detail', id=p.id) }}">자세히 보기 {{ icon('arrow') }}</a></div>
-        </div>
-    </article>
-    {% else %}<div class="white-card empty-state"><p>조건에 맞는 상품이 없습니다.</p><a class="btn" href="{{ url_for('reg_item') }}">상품 등록하기</a></div>{% endfor %}
+    {% if status == 'closed' %}{{ closed_card(p) }}{% else %}{{ open_card(p) }}{% endif %}
+    {% else %}<div class="white-card empty-state product-grid-empty">{% if status == 'closed' %}<p>마감된 공동구매가 없어요.</p><a class="btn" href="{{ url_for('view_list') }}">진행 중인 공동구매 보기</a>{% else %}<p>진행 중인 공동구매가 없어요.</p><a class="btn" href="{{ url_for('reg_item') }}">상품 등록하기</a>{% endif %}</div>{% endfor %}
     </div>
     {{ pagination('view_list') }}
 </section>
-<aside class="right-rail"><section class="green-panel"><h3>실시간 상품 랭킹</h3><hr><div class="chips">{% for tag in ['생활 · 패션','식품','기타'] %}<a class="chip" href="{{ url_for('view_list', category=tag) }}">{{ tag }}</a>{% endfor %}</div><ol class="rank-list">{% for p in ranking %}<li><span>{{ loop.index }}</span><a href="{{ url_for('product_detail',id=p.id) }}"><small>{{ p.seller_id }} / {{ p.manufacturer }}</small><strong>{{ p.name }}</strong></a></li>{% endfor %}</ol><p class="small center">공동구매 참여 인원 기준</p></section><button class="btn btn-white" type="button" data-focus-search>상품 검색하기</button></aside>
+<aside class="right-rail">
+    <section class="green-panel rank-panel"><h3>실시간 상품 랭킹</h3>
+        <div class="rank-filters">{% for tag in categories %}<a class="{{ 'on' if category == tag else '' }}" href="{{ url_for('view_list', status=status, category=none if category == tag else tag) }}" {% if category == tag %}aria-current="true"{% endif %}>{{ tag }}</a>{% endfor %}</div>
+        <ol class="rank-list">{% for p in ranking %}<li><span>{{ loop.index }}</span><a href="{{ url_for('product_detail',id=p.id) }}"><strong>{{ p.name }}</strong><small>{{ p.participants }}명 참여</small></a></li>{% endfor %}</ol>
+        <p class="rank-note">공동구매 참여 인원 기준</p>
+    </section>
+    <a class="btn btn-white rank-register" href="{{ url_for('reg_item') }}">+ 상품 등록하기</a>
+</aside>
 </div>
-{%- endmacro %}
-
-{% macro review_product(p, selectable=false) -%}
-<section class="green-panel review-product-banner">
-    <div class="banner-photo"><strong>{{ '리뷰 작성 중인 상품' if selectable else '리뷰한 상품' }}</strong>{{ photo(p.image) }}</div>
-    <div class="banner-content"><p class="soft-text">{{ p.seller_id }} 님의 공동구매로 함께한 상품이에요.</p><div class="banner-name"><span class="chip">{{ p.category or '생활 · 패션' }}</span><h2>{{ p.name }}</h2><span>블랙/M</span></div><div class="button-row">{% if selectable %}<a class="btn btn-white" href="{{ url_for('account') }}">구매 내역 확인하기</a><a class="btn btn-white" href="{{ url_for('view_review', product_id=p.id) }}">다른 리뷰 확인하기</a>{% else %}<a class="btn btn-white" href="{{ url_for('product_detail',id=p.id) }}">상품 확인하기</a>{% endif %}</div></div>
-</section>
 {%- endmacro %}
 
 <!DOCTYPE html>
@@ -75,25 +139,21 @@
 </head>
 <body>
 <div class="app-shell">
-    <aside class="sidebar" id="sidebar">
-        <div class="profile"><a class="avatar" href="{{ url_for('account') }}" aria-label="마이페이지"></a><strong>{{ user.username if user else 'User' }}</strong>{% if user %}<form action="{{ url_for('logout') }}" method="post"><button class="pill" type="submit">Logout</button></form>{% else %}<a class="pill" href="{{ url_for('login') }}">Login</a>{% endif %}</div>
-        <nav class="side-menu" aria-label="사이드 메뉴"><h2>Menu</h2>{% for endpoint,text,key in [('reg_item','Product Registration','registration'),('view_list','Product List','list'),('cart','Cart','cart'),('reg_review','Review Writing','writing')] %}<a href="{{ url_for(endpoint) }}" class="{{ 'active' if active==key else '' }}">{{ text }}<span aria-hidden="true">▹</span></a>{% endfor %}<h2>My Page</h2>{% for endpoint,text,key in [('signup','Signup','signup'),('login','Login/Logout','login'),('account','Account','account')] %}<a href="{{ url_for(endpoint) }}">{{ text }}<span aria-hidden="true">▹</span></a>{% endfor %}</nav>
+    <aside class="sidebar">
+        <div class="profile"><a class="avatar {{ '' if user else 'guest' }}" href="{{ url_for('account') }}" aria-label="마이페이지"></a><strong>{{ user.username ~ ' 님' if user else '로그인이 필요해요' }}</strong>{% if user %}<form action="{{ url_for('logout') }}" method="post"><button class="profile-action" type="submit">로그아웃</button></form>{% else %}<a class="login-pill" href="{{ url_for('login') }}">로그인</a>{% endif %}</div>
+        <nav class="side-menu" aria-label="사이드 메뉴"><h2>MENU</h2>{% for endpoint,text,key in [('login','로그인','login'),('view_list','상품 목록','list'),('reg_item','상품 등록','registration'),('reg_review','리뷰 작성','writing'),('cart','장바구니','cart')] %}<a href="{{ url_for(endpoint) }}" class="{{ 'on' if active==key else '' }}" {% if active==key %}aria-current="page"{% endif %}>{{ text }}{% if key=='cart' and cart_count %} <span class="nav-count">{{ cart_count }}</span>{% endif %}</a>{% endfor %}<h2>MY PAGE</h2><a href="{{ url_for('account') }}" class="{{ 'on' if active=='account' else '' }}" {% if active=='account' %}aria-current="page"{% endif %}>마이페이지</a></nav>
         <a class="home-link" href="{{ url_for('hello') }}">이화 공동구매 · HOME</a>
     </aside>
-    <main class="main-content">
+    <main class="main-content {% block main_class %}{% endblock %}">
+        {% block header %}
         <header class="site-header">
-            <div class="topbar">
-                <button class="mobile-menu icon-button" type="button" aria-label="메뉴 열기" aria-expanded="false" aria-controls="sidebar">{{ icon('menu') }}</button>
-                <div class="header-left">
-                    <div class="page-heading"><span class="section-badge">{{ badge }}</span><h1>{{ page_title }}</h1></div>
-                    {{ navigation() }}
-                </div>
-                <div class="header-right">
-                    <form class="search-bar" action="{{ url_for('view_list') }}" method="get"><button type="submit" class="icon-button" aria-label="상품 검색">{{ icon('search') }}</button><label class="sr-only" for="global-search">상품 검색</label><input id="global-search" name="q" value="{{ request.args.get('q','') }}" placeholder="상품 검색" autocomplete="off"></form>
-                    <a class="cart-button" href="{{ url_for('cart') }}" aria-label="장바구니">{{ icon('cart') }}{% if cart_count %}<span class="cart-count">{{ cart_count }}</span>{% endif %}</a>
-                </div>
+            <div class="page-heading"><span class="section-badge">EwhaMarket</span><h1>{{ page_title }}</h1></div>
+            <div class="header-tools">
+                <form class="search-bar" action="{{ url_for('view_list') }}" method="get"><button type="submit" class="icon-button" aria-label="상품 검색">{{ icon('search') }}</button><label class="sr-only" for="global-search">상품 검색</label><input id="global-search" type="search" name="q" value="{{ request.args.get('q','') }}" placeholder="상품명, 판매자 검색" autocomplete="off"></form>
+                <a class="cart-button" href="{{ url_for('cart') }}" aria-label="장바구니{% if cart_count %} {{ cart_count }}개{% endif %}">{{ icon('cart') }}{% if cart_count %}<span class="cart-count">{{ cart_count }}</span>{% endif %}</a>
             </div>
         </header>
+        {% endblock %}
         {% with messages=get_flashed_messages(with_categories=true) %}{% for category,message in messages %}<div class="notice {{ category }}" role="status">{{ message }}<button type="button" data-dismiss aria-label="알림 닫기">×</button></div>{% endfor %}{% endwith %}
         {% block content %}{{ product_listing() }}{% endblock %}
     </main>

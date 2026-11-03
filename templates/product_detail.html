@@ -1,12 +1,71 @@
 {% extends "index.html" %}
 {% block content %}
-<div class="two-column detail-layout">
-<article class="white-card detail-card"><div class="detail-title"><h2>{{ product.name }}</h2><span class="chip chip-green">{{ product.category or '생활 · 패션' }}</span></div>
-<dl class="detail-grid"><dt>공동구매 주관 (ID)</dt><dd>{{ product.seller_id }} <a class="muted small" href="{{ url_for('view_list',q=product.seller_id) }}">사용자의 다른 상품 보기</a></dd><dt>공동구매 진행 일자</dt><dd>{{ product.start_date or '일정 미정' }}{% if product.end_date %} ~ {{ product.end_date }}{% endif %}</dd>
-<dt>상품 수령 일시</dt><dd>{{ product.pickup_datetime|replace('T',' ') if product.pickup_datetime else '일정 미정' }}</dd>
-<dt>상품 수령 장소</dt><dd>{{ product.address }}</dd>
-<dt>목표 달성 금액 (개수) /<br>예상 가격</dt><dd>{{ product.target_amount|won }}원 ({{ product.target_count or '미정' }}개) /<br>{{ product.price|won }}원{% set target=product.target_count|default('40',true)|int %}<progress value="{{ product.participants }}" max="{{ [target,1]|max }}" aria-label="공동구매 참여 현황"></progress><small class="muted">현재 {{ product.participants }}명 참여</small></dd><dt>상품 사진</dt><dd><div class="photo-pair">{{ photo(product.image) }}{{ photo('', 'dark', '추가 상품 사진') }}</div></dd><dt>제작 업체</dt><dd>{{ product.manufacturer or '미입력' }}</dd><dt>상품 상세 설명</dt><dd class="preserve-lines">{{ product.description or '등록된 설명이 없습니다.' }}</dd><dt>상품 상태 / 이메일</dt><dd>{{ status_labels.get(product.status,product.status) }} / {{ product.email }}</dd></dl>
-</article>
-<aside class="right-rail"><form id="option-form" action="{{ url_for('cart_add') }}" method="post"><input type="hidden" name="product_id" value="{{ product.id }}"><section class="green-panel option-panel"><h3>상품 옵션 선택</h3><hr><fieldset><legend>사이즈</legend><div class="chips">{% for size in ['S','M','L'] %}<label class="choice"><input type="radio" name="size" value="{{ size }}" {{ 'checked' if size=='M' }}><span>{{ size }}</span></label>{% endfor %}</div></fieldset><fieldset><legend>색상</legend><div class="chips">{% for color in ['그린','블랙'] %}<label class="choice"><input type="radio" name="color" value="{{ color }}" {{ 'checked' if color=='그린' }}><span>{{ color }}</span></label>{% endfor %}</div></fieldset><label for="quantity">수량</label><input class="quantity" type="number" id="quantity" name="quantity" min="1" max="99" value="1"></section><button class="btn btn-white full" type="submit">장바구니 담기</button><button class="btn full" type="submit" formaction="{{ url_for('participate') }}">구매하기</button><p class="small muted center">실습에서는 공동구매 참여만 기록되며<br>실제 결제는 진행되지 않습니다.</p></form></aside>
+<div class="detail-layout">
+    <div class="detail-main">
+        <section class="detail-card detail-summary">
+            <div class="detail-gallery">
+                <div class="photo-main">{% if product.image %}<img src="{{ url_for('static', filename=product.image) }}" alt="{{ product.name }} 대표 사진">{% else %}상품 대표 사진{% endif %}</div>
+                <div class="photo-thumbs">
+                    <div class="photo-thumb on">{% if product.image %}<img src="{{ url_for('static', filename=product.image) }}" alt="">{% else %}1{% endif %}</div>
+                    <div class="photo-thumb">2</div>
+                </div>
+            </div>
+            <div class="detail-info">
+                <div class="detail-tags">
+                    {{ dday(days_left) }}
+                    <span class="chip">{{ product.category or '생활 · 패션' }}</span>
+                </div>
+                <h2 class="detail-name">{{ product.name }}</h2>
+                <p class="detail-host">진행 <a href="{{ url_for('view_list', q=product.seller_id) }}" title="사용자의 다른 상품 보기">{{ product.seller_id }}</a> · 제작 {{ product.manufacturer or '미입력' }}</p>
+                <p class="detail-price">{{ product.price|won }}<span>원</span></p>
+                <div class="funding">
+                    <div class="funding-head">
+                        {% if target %}<span><b>{{ progress }}%</b> 달성</span><span class="funding-count">{{ product.participants }}명 / 목표 {{ target }}명</span>
+                        {% else %}<span><b>{{ product.participants }}명</b> 참여</span><span class="funding-count">목표 인원 미정</span>{% endif %}
+                    </div>
+                    {% if target %}<progress value="{{ progress }}" max="100" aria-label="공동구매 진행률">{{ progress }}%</progress>{% endif %}
+                    <p class="funding-note">{% if days_left is not none and days_left < 0 %}{{ deadline }} 마감되었습니다{% elif target and not remaining %}목표 인원 달성{% if deadline %} · {{ deadline }} 마감{% endif %}{% elif target %}{{ remaining }}명만 더 모이면 확정{% if deadline %} · {{ deadline }} 마감{% endif %}{% elif deadline %}{{ deadline }} 마감{% endif %}</p>
+                </div>
+            </div>
+        </section>
+        <section class="detail-card">
+            <h2>수령 안내</h2>
+            <div class="pickup-grid">
+                <div class="pickup-box"><span>수령 일시</span><strong>{{ pickup_text }}</strong></div>
+                <div class="pickup-box"><span>수령 장소</span><strong>{{ product.address }}</strong></div>
+            </div>
+            <dl class="detail-rows">
+                <div><dt>진행 기간</dt><dd>{{ product.start_date|replace('-','.') if product.start_date else '일정 미정' }}{% if product.end_date %} ~ {{ product.end_date|replace('-','.') }}{% endif %}</dd></div>
+                <div><dt>목표 금액</dt><dd>{{ product.target_amount|won ~ '원' if product.target_amount else '미정' }}</dd></div>
+                <div><dt>상품 상태</dt><dd>{{ status_labels.get(product.status,product.status) }}</dd></div>
+                <div><dt>문의</dt><dd>{{ product.email }}</dd></div>
+                <div><dt>상세 설명</dt><dd class="preserve-lines">{{ product.description or '등록된 설명이 없습니다.' }}</dd></div>
+            </dl>
+        </section>
+        <a class="back-link" href="{{ url_for('view_list') }}">상품 목록으로 →</a>
+    </div>
+    <form class="option-panel" id="option-form" action="{{ url_for('cart_add') }}" method="post" data-price="{{ product.price }}">
+        <input type="hidden" name="product_id" value="{{ product.id }}">
+        <div class="option-head"><h2>옵션 선택</h2><span>{{ '진행자가 등록한 옵션 중에서 골라요' if product.sizes or product.colors else '이 상품은 따로 고를 옵션이 없어요' }}</span></div>
+        {% if product.sizes %}<fieldset><legend>사이즈</legend><div class="choices">{% for size in product.sizes %}<label class="choice"><input type="radio" name="size" value="{{ size }}" {{ 'checked' if loop.first }} required><span>{{ size }}</span></label>{% endfor %}</div></fieldset>{% endif %}
+        {% if product.colors %}<fieldset><legend>색상</legend><div class="choices">{% for color in product.colors %}<label class="choice"><input type="radio" name="color" value="{{ color.name }}" {{ 'checked' if loop.first }} required><span>{% if color.hex %}<i class="swatch" style="background:{{ color.hex }}" aria-hidden="true"></i>{% endif %}{{ color.name }}</span></label>{% endfor %}</div></fieldset>{% endif %}
+        <div>
+            <label class="option-label" for="quantity">수량</label>
+            <div class="stepper">
+                <button type="button" data-step="-1" aria-label="수량 줄이기">−</button>
+                <input type="number" id="quantity" name="quantity" min="1" max="99" value="1">
+                <button type="button" data-step="1" aria-label="수량 늘리기">+</button>
+            </div>
+        </div>
+        <div class="option-total"><span>총 금액</span><b><output id="option-total" for="quantity">{{ product.price|won }}</output>원</b></div>
+        {% if days_left is not none and days_left < 0 %}
+        <button class="option-buy" type="button" disabled>마감된 공동구매예요</button>
+        <p class="option-note">마감된 공동구매에는 참여하거나 장바구니에 담을 수 없어요.</p>
+        {% else %}
+        <button class="option-buy" type="submit" formaction="{{ url_for('participate') }}">구매하기</button>
+        <button class="option-cart" type="submit">장바구니 담기</button>
+        <p class="option-note">{{ '' if user else '구매하려면 로그인이 필요해요. ' }}실습에서는 참여만 기록되고 실제 결제는 진행되지 않습니다.</p>
+        {% endif %}
+    </form>
 </div>
 {% endblock %}

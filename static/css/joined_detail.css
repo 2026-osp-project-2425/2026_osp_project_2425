@@ -1,0 +1,41 @@
+.joined-stack { display:flex; flex-direction:column; gap:20px; }
+.joined-summary { flex-direction:row; flex-wrap:wrap; gap:28px; }
+.joined-photo { flex:0 1 300px; display:flex; align-items:center; justify-content:center; min-width:240px; height:300px; overflow:hidden; background:var(--placeholder); border-radius:12px; color:#62666a; font-size:14px; }
+.joined-photo img { width:100%; height:100%; object-fit:cover; display:block; }
+.joined-info { flex:1 1 320px; min-width:0; display:flex; flex-direction:column; gap:12px; }
+.joined-tags { display:flex; flex-wrap:wrap; gap:6px; }
+.joined-name { font-size:28px; letter-spacing:-.01em; line-height:1.3; overflow-wrap:anywhere; }
+.joined-desc { color:var(--muted); font-size:15px; }
+.joined-info .kv { margin-top:4px; }
+.joined-price { font-size:20px; font-weight:800 !important; }
+.chat-strip { display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin-top:4px; padding:12px 12px 12px 14px; background:var(--ink); color:#fff; border-radius:14px; }
+.chat-strip-text { flex:1 1 140px; min-width:0; display:flex; flex-direction:column; gap:1px; }
+.chat-strip-text span:first-child { color:#7fc4ad; font-size:12px; font-weight:700; }
+.chat-strip-text span:last-child { overflow:hidden; color:#c9cfcd; font-size:13px; text-overflow:ellipsis; white-space:nowrap; }
+.chat-strip a { display:inline-flex; align-items:center; justify-content:center; min-height:44px; padding:0 16px; border-radius:10px; background:#fee500; color:var(--ink); font-size:14px; font-weight:800; white-space:nowrap; }
+.joined-status { flex:1 1 280px; display:flex; flex-direction:column; gap:12px; padding:22px; background:#f3f7f5; border-radius:16px; }
+.joined-status>b { font-size:17px; }
+.joined-count { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:flex-end; gap:8px; }
+.joined-count span { color:var(--body); font-size:14px; }
+.joined-count span b { color:var(--ink); font-size:26px; }
+.joined-count>b { color:var(--green); font-size:30px; }
+.joined-status progress { height:12px; }
+.joined-status p { color:var(--body); font-size:14px; line-height:1.6; }
+.joined-status p b { color:var(--urgent); }
+.joined-status .line-btn { margin-top:auto; border-color:var(--green); }
+.joined-status .share-status { margin:-4px 0 0; color:var(--muted); font-size:12px; }
+.joined-status .share-status:empty { display:none; }
+.align-end { align-self:flex-end; }
+.news-panel { gap:4px; }
+.news-row { display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; padding:14px 12px; border-bottom:1px solid var(--line); font-size:15px; }
+.news-row:last-child { border-bottom:0; }
+.news-row.pinned { background:#fbf8f1; border-radius:10px; }
+.news-row b,.news-row>span:not(.status-chip):not(.news-date) { min-width:0; overflow-wrap:anywhere; }
+.news-row a { color:var(--green); font-weight:600; overflow-wrap:anywhere; }
+.news-date { margin-left:auto; color:var(--muted); font-size:13px; white-space:nowrap; }
+.news-lead { padding:16px 12px 8px; color:var(--body); font-size:14px; }
+.news-empty { padding:28px 12px; color:var(--muted); font-size:14px; text-align:center; }
+@media(max-width:760px) {
+    .joined-photo { flex-basis:100%; height:220px; min-width:0; }
+    .joined-name { font-size:24px; }
+}

@@ -1,5 +1,43 @@
-#product-form .form-card { width:100%; }
-#product-form .form-grid input,#product-form .form-grid select { min-height:42px; }
-#product-form .input-group #target_count { max-width:120px; }
-#product-form .input-group #target_amount { max-width:260px; }
-#product-form .input-group #price { max-width:360px; }
+.photo-section { gap:14px; }
+.photo-section .section-head h2 { font-size:18px; }
+.chat-field { display:flex; align-items:center; gap:10px; height:48px; padding:0 14px; border:1px solid var(--field-line); border-radius:12px; background:#fff; }
+.chat-field:focus-within { outline:3px solid #72b3a0; outline-offset:3px; }
+.chat-field .chat-badge { width:28px; height:28px; border-radius:8px; }
+.chat-field .chat-badge .icon { width:16px; height:16px; }
+.field .chat-field input { height:auto; padding:0; border:0; outline:0; }
+/* 숨긴 구매 옵션 칸은 번호를 세지 않도록 번호를 CSS로 매긴다. */
+.product-form { counter-reset:form-section; }
+.product-form .form-card:not([hidden]) { counter-increment:form-section; }
+.product-form .section-num::before { content:counter(form-section); }
+.option-section { border:1.5px solid #cfe0d7; }
+.option-section[hidden] { display:none; }
+.option-section .section-head { flex-wrap:wrap; }
+.option-only { padding:2px 8px; border-radius:6px; background:var(--soft-green); color:var(--green); font-size:12px; font-weight:700; }
+.option-lead { margin:-6px 0 0; color:var(--muted); font-size:14px; }
+.option-group { display:flex; flex-direction:column; gap:12px; padding:18px; border:1px solid #e3e5e1; border-radius:16px; }
+.option-group-head { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+.option-group-head b { font-size:16px; }
+.option-body { display:flex; flex-direction:column; gap:12px; }
+.option-body[hidden] { display:none; }
+.switch { position:relative; flex:0 0 auto; display:inline-flex; cursor:pointer; }
+.switch input { position:absolute; inset:0; width:100%; height:100%; margin:0; opacity:0; cursor:pointer; }
+.switch span { position:relative; width:44px; height:26px; border-radius:999px; background:#c9cdc9; transition:background .15s; }
+.switch span::after { content:""; position:absolute; top:3px; left:3px; width:20px; height:20px; border-radius:50%; background:#fff; transition:transform .15s; }
+.switch input:checked+span { background:var(--green); }
+.switch input:checked+span::after { transform:translateX(18px); }
+.switch input:focus-visible+span { outline:3px solid #72b3a0; outline-offset:3px; }
+.option-tags,.option-list { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+.option-list:empty { display:none; }
+.option-tag { display:inline-flex; align-items:center; gap:8px; height:40px; padding:0 4px 0 14px; border-radius:10px; background:#eef4f1; color:var(--ink); font-size:15px; font-weight:700; }
+.option-tag button { display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:7px; background:transparent; color:var(--muted); font-size:14px; }
+.option-tag button:hover { background:#dfeae4; color:var(--ink); }
+.option-swatch { width:18px; height:18px; padding:0; border:1px solid #0003; border-radius:50%; background:none; cursor:pointer; overflow:hidden; }
+.option-swatch::-webkit-color-swatch-wrapper { padding:0; }
+.option-swatch::-webkit-color-swatch { border:0; border-radius:50%; }
+.option-swatch::-moz-color-swatch { border:0; border-radius:50%; }
+.field .option-add,.option-add { width:auto; min-width:170px; height:40px; padding:0 12px; border:1.5px dashed #b9bdb9; border-radius:10px; background:#fff; font-size:14px; }
+.option-add:focus { border-style:solid; border-color:var(--green); }
+.option-presets { display:flex; flex-wrap:wrap; align-items:center; gap:6px; }
+.option-presets .hint { margin-right:2px; }
+.option-preset { display:inline-flex; align-items:center; min-height:32px; padding:0 10px; border:1px solid var(--field-line); border-radius:999px; background:#fff; color:var(--body); font-size:12px; font-weight:600; }
+.option-preset:hover { border-color:var(--green); color:var(--green); }

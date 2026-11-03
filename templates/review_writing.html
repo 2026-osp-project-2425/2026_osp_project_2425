@@ -1,4 +1,44 @@
 {% extends "index.html" %}
 {% block content %}
-<div class="review-page"><form class="product-select" method="get"><label for="product_id">상품 선택</label><select id="product_id" name="product_id" data-auto-submit>{% for p in products %}<option value="{{ p.id }}" {{ 'selected' if p.id==product.id }}>{{ p.name }}</option>{% endfor %}</select><button class="sr-only" type="submit">상품 선택 적용</button></form>{{ review_product(product,true) }}<form action="{{ url_for('reg_review') }}" method="post" enctype="multipart/form-data" data-draft="review"><input type="hidden" name="product_id" value="{{ product.id }}"><section class="white-card review-detail"><label class="sr-only" for="title">리뷰 제목</label><input class="title-input" id="title" name="title" placeholder="제목 작성" required><p class="small muted">{{ user.username if user else 'User' }}</p><div class="form-grid"><label for="rating">평점</label><div class="rating-input"><span class="stars" aria-hidden="true">★★★★★</span><select id="rating" name="rating"><option value="5">5.0 · 아주 만족해요</option><option value="4">4.0 · 만족해요</option><option value="3">3.0 · 보통이에요</option><option value="2">2.0 · 아쉬워요</option><option value="1">1.0 · 불만족해요</option></select></div><label for="review_file">리뷰 사진 <small>(선택)</small></label><div class="upload-control" data-upload><div class="photo-pair"><div class="photo-slot light"><img data-preview alt="선택한 리뷰 사진" hidden></div><label class="photo-slot upload-tile" for="review_file">{{ icon('plus') }}<span>드래그 앤 드롭 또는<br>파일 불러오기</span><input type="file" id="review_file" name="file_input" accept="image/png,image/jpeg,image/gif,image/webp"></label></div><p class="file-caption" data-file-name>선택한 파일이 없습니다.</p></div><label for="description">리뷰 상세</label><textarea id="description" name="description" rows="5" placeholder="상품 사용 후기를 작성해 주세요" required></textarea></div></section><div class="form-actions"><p class="muted small" data-draft-status aria-live="polite"></p><button class="btn btn-white" type="button" data-save-draft>임시 저장하기</button><button class="btn" type="submit">리뷰 등록하기</button></div></form></div>
+<div class="form-stack">
+    <form class="product-select" method="get"><label for="product_id">상품 선택</label><select id="product_id" name="product_id" data-auto-submit>{% for p in products %}<option value="{{ p.id }}" {{ 'selected' if p.id==product.id }}>{{ p.name }}</option>{% endfor %}</select><button class="sr-only" type="submit">상품 선택 적용</button></form>
+    <section class="green-panel writing-product">
+        <p class="writing-label">리뷰 작성 중인 상품</p>
+        <div class="writing-row">
+            <div class="writing-photo">{% if product.image %}<img src="{{ url_for('static', filename=product.image) }}" alt="">{% else %}사진{% endif %}</div>
+            <div class="writing-info">
+                <p>{{ product.seller_id }} 님의 공동구매로 함께한 상품이에요.</p>
+                <div class="writing-name"><span class="writing-chip">{{ product.category or '생활 · 패션' }}</span><b>{{ product.name }}</b>{% if order and order|option %}<span class="writing-option">{{ order|option }}</span>{% endif %}</div>
+                <div class="writing-links"><a href="{{ url_for('account') }}">구매 내역 확인하기</a><a href="{{ url_for('view_review', product_id=product.id) }}">다른 리뷰 확인하기</a></div>
+            </div>
+        </div>
+    </section>
+    <form class="form-stack" action="{{ url_for('reg_review') }}" method="post" enctype="multipart/form-data" data-draft="review">
+        <input type="hidden" name="product_id" value="{{ product.id }}">
+        <section class="form-card">
+            <div class="section-head"><span class="section-num">1</span><h2>만족도</h2></div>
+            <div class="rating-row" data-rating>
+                <fieldset class="rating-stars"><legend class="sr-only">별점</legend>{% for score in range(1,6) %}<label><input class="sr-only" type="radio" name="rating" value="{{ score }}" data-label="{{ rating_labels[score] }}" {{ 'checked' if score==5 }}><span aria-hidden="true">★</span><span class="sr-only">{{ score }}점</span></label>{% endfor %}</fieldset>
+                <div class="rating-value"><b data-rating-score>5.0</b> <span data-rating-label>{{ rating_labels[5] }}</span></div>
+            </div>
+        </section>
+        <section class="form-card">
+            <div class="section-head"><span class="section-num">2</span><h2>후기 내용</h2></div>
+            <p class="writer-hint">작성자 <b>{{ user.username if user else 'User' }}</b> · {{ '로그인 계정으로 등록돼요' if user else '로그인하면 내 계정으로 등록돼요' }}</p>
+            <label class="field">제목<input id="title" name="title" placeholder="예: 겨울 필수템" required></label>
+            <label class="field"><span>상세 설명</span><textarea id="description" name="description" placeholder="사이즈감, 품질, 수령 과정은 어땠나요?" maxlength="500" required data-char-count></textarea><span class="hint char-count"><span data-char-current>0</span> / 500자</span></label>
+        </section>
+        <section class="form-card photo-section">
+            <div class="section-head"><span class="section-num">3</span><h2>사진</h2></div>
+            <div class="upload-control" data-upload>
+                <div class="upload-row">
+                    <div class="upload-preview only-selected"><img data-preview alt="선택한 리뷰 사진" hidden></div>
+                    <label class="upload-add" for="review_file">+ 사진 추가<input type="file" id="review_file" name="file_input" accept="image/png,image/jpeg,image/gif,image/webp"></label>
+                </div>
+                <p class="file-caption" data-file-name>선택한 파일이 없습니다.</p>
+            </div>
+        </section>
+        <div class="form-submit"><p class="muted small" data-draft-status aria-live="polite"></p><button class="btn btn-white" type="button" data-save-draft>임시 저장하기</button><button class="btn" type="submit">리뷰 등록하기</button></div>
+    </form>
+</div>
 {% endblock %}

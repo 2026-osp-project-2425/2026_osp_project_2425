@@ -1,5 +1,26 @@
-.pill-green { background:var(--green); color:white; }
-.password-field { max-width:100%; }
-.form-card>.form-grid { gap:24px 22px; }
-.required-dot { color: #e74c3c; font-weight: bold; margin-left: 2px; }
-.optional-tag { color: var(--muted); font-size: 12px; font-weight: normal; margin-left: 4px; }
+.signup-card { max-width:680px; display:flex; flex-direction:column; gap:26px; padding:40px; background:#fff; border-radius:24px; }
+.signup-section { display:flex; flex-direction:column; gap:16px; }
+.signup-section+.signup-section { padding-top:22px; border-top:1px solid var(--line); }
+.signup-section h2 { display:flex; align-items:center; gap:8px; font-size:18px; font-weight:700; }
+.signup-card .field input { height:50px; }
+.id-row { display:flex; gap:8px; }
+.id-check-button { flex:0 0 auto; height:50px; padding:0 18px; border:1px solid var(--green); border-radius:12px; background:#fff; color:var(--green); font-size:14px; font-weight:700; }
+.id-check { color:var(--urgent); font-size:13px; font-weight:600; }
+.id-check.ok { color:var(--green); }
+.id-check:empty { display:none; }
+.password-rules { display:flex; flex-wrap:wrap; gap:16px; margin-top:-8px; color:var(--muted); font-size:13px; font-weight:500; }
+.password-rules span::before { content:"○ "; }
+.password-rules span.ok { color:var(--green); }
+.password-rules span.ok::before { content:"✓ "; }
+.verify-row { display:flex; flex-wrap:wrap; align-items:center; gap:16px; }
+.verify-row .upload-preview,.verify-row .upload-add { width:96px; height:96px; }
+.verify-text { flex:1 1 240px; display:flex; flex-direction:column; gap:4px; }
+.verify-text>span { font-size:14px; font-weight:600; }
+.verify-text p { margin:0; color:var(--muted); font-size:13px; line-height:1.6; }
+.verify-text .file-caption { font-size:12px; }
+.field-title { display:flex; align-items:center; gap:8px; font-weight:500; padding:4px; }
+.signup-submit { display:flex; flex-direction:column; gap:10px; }
+.signup-submit .btn { min-height:58px; font-size:17px; font-weight:800; }
+.signup-submit p { margin:0; color:var(--muted); font-size:14px; text-align:center; }
+.signup-submit a { color:var(--green); font-weight:700; }
+@media(max-width:480px) { .signup-card { padding:24px 20px; } }

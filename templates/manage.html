@@ -1,0 +1,127 @@
+{% extends "index.html" %}
+{% block header %}
+<header class="back-header">
+    <div><a class="back-to" href="{{ url_for('account', tab='hosted') }}">← 내가 진행한 공동구매</a><h1>{{ page_title }}</h1></div>
+    <div class="back-actions">
+        <a class="line-btn dark" href="{{ url_for('product_detail', id=product.id) }}">상품 페이지 보기 →</a>
+        <a class="fill-btn" href="{{ url_for('edit_item', product_id=product.id) }}">✎ 상품 정보 수정</a>
+    </div>
+</header>
+{% endblock %}
+{% block content %}
+{% set f = state %}
+<div class="manage-stack">
+    <section class="panel manage-summary">
+        <div class="manage-product">
+            <div class="manage-photo">{% if product.image %}<img src="{{ url_for('static', filename=product.image) }}" alt="{{ product.name }} 사진">{% else %}사진{% endif %}</div>
+            <div class="manage-info">
+                <span>{% if not f.closed %}<span class="status-chip active">진행 중</span>{% elif f.cancelled %}<span class="status-chip off">목표 미달 · 취소</span>{% elif f.received %}<span class="status-chip off">종료</span>{% else %}<span class="status-chip done">모집 완료</span>{% endif %}</span>
+                <b class="manage-name">{{ product.name }}</b>
+                {% if product.description %}<span class="manage-desc">{{ product.description|truncate(60, true, '…') }}</span>{% endif %}
+                <span class="manage-line">📅 {{ product.start_date|kdate or '시작일 미정' }} ~ {{ product.end_date|kdate or '마감일 미정' }}{% if not f.closed and f.left is not none %} <span class="status-chip urgent">{{ 'D-DAY' if f.left == 0 else 'D-' ~ f.left }}</span>{% endif %}</span>
+                <span class="manage-line">👥 목표 인원 <b>{{ f.target ~ '명' if f.target else '미정' }}</b></span>
+            </div>
+        </div>
+        <div class="manage-progress">
+            <div class="manage-rate"><span>달성률 <b>{{ f.progress if f.target else '-' }}{{ '%' if f.target }}</b></span><span>참여 인원 <b>{{ f.participants }}명</b>{% if f.target %} / {{ f.target }}명{% endif %}</span></div>
+            {% if f.target %}<progress value="{{ f.progress }}" max="100" aria-label="공동구매 달성률">{{ f.progress }}%</progress>{% endif %}
+            <div class="manage-stats">
+                <div><span>참여 인원</span><b>{{ f.participants }}명</b></div>
+                <div><span>주문 수량</span><b>{{ quantity }}개</b></div>
+                <div><span>예상 금액</span><b>{{ (product.price|int * f.participants)|won }}원</b></div>
+            </div>
+            <p class="manage-hint">참여 인원과 예상 금액은 상품의 전체 참여 수 기준이고, 주문 수량은 이 사이트에서 로그인해 참여한 주문만 셉니다.</p>
+        </div>
+    </section>
+
+    <nav class="sub-tabs manage-tabs" aria-label="관리 메뉴">
+        {% for key,text in tabs.items() %}<a class="{{ 'on' if tab == key else '' }}" href="{{ url_for('manage', product_id=product.id, tab=key) }}" {% if tab == key %}aria-current="page"{% endif %}>{{ text }}{% if key == 'reviews' and reviews %} <span class="status-chip wait">{{ reviews|length }}</span>{% endif %}</a>{% endfor %}
+    </nav>
+
+    <div class="manage-layout">
+        <section class="panel manage-main">
+        {% if tab == 'participants' %}
+            <div class="panel-row">
+                <h2 class="panel-title">참여자 목록 <span>({{ orders|length }}건)</span></h2>
+                <form class="manage-search" method="get" action="{{ url_for('manage', product_id=product.id) }}"><input type="hidden" name="tab" value="participants">{{ icon('search') }}<label class="sr-only" for="participant-search">참여자 검색</label><input id="participant-search" type="search" name="q" value="{{ query }}" placeholder="이름 또는 아이디 검색"></form>
+            </div>
+            <div class="table-wrap">
+            <table class="manage-table">
+                <thead><tr><th scope="col">참여자</th><th scope="col">주문 옵션</th><th scope="col">수량</th><th scope="col">주문 상태</th></tr></thead>
+                <tbody>
+                {% for o in listed %}
+                <tr><td><span class="person"><span class="initial" aria-hidden="true">{{ (o.name or o.username)[:1] }}</span><span><b>{{ o.name or '탈퇴한 사용자' }}</b> <span class="muted">({{ o.username }})</span></span></span></td><td>{{ o|option or '-' }}</td><td>{{ o.quantity }}개</td><td>{% if f.cancelled %}<span class="status-chip off">취소</span>{% elif f.closed %}<span class="status-chip done">구매 확정</span>{% else %}<span class="status-chip done">주문 완료</span>{% endif %}</td></tr>
+                {% else %}
+                <tr><td colspan="4" class="table-empty">{{ '검색 결과가 없어요.' if query else '아직 이 사이트에서 로그인해 참여한 주문이 없어요.' }}</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            </div>
+            {% if pages > 1 %}<nav class="manage-pages" aria-label="페이지 선택">
+                {% if current_page > 1 %}<a href="{{ url_for('manage', product_id=product.id, tab='participants', q=query or none, page=current_page-1) }}" aria-label="이전 페이지">‹</a>{% endif %}
+                {% for number in range(1, pages+1) %}<a class="{{ 'on' if number == current_page else '' }}" href="{{ url_for('manage', product_id=product.id, tab='participants', q=query or none, page=number) }}" {% if number == current_page %}aria-current="page"{% endif %}>{{ number }}</a>{% endfor %}
+                {% if current_page < pages %}<a href="{{ url_for('manage', product_id=product.id, tab='participants', q=query or none, page=current_page+1) }}" aria-label="다음 페이지">›</a>{% endif %}
+            </nav>{% endif %}
+        {% elif tab == 'orders' %}
+            <div class="panel-row"><h2 class="panel-title">옵션별 주문 현황</h2><a class="line-btn" href="{{ url_for('manage_csv', product_id=product.id) }}">{{ icon('download') }} CSV 받기</a></div>
+            <div class="table-wrap">
+            <table class="manage-table">
+                <thead><tr><th scope="col">옵션</th><th scope="col">주문 수</th><th scope="col">수량</th><th scope="col">금액</th></tr></thead>
+                <tbody>
+                {% for o in options %}<tr><td>{{ o.option }}</td><td>{{ o.orders }}건</td><td>{{ o.quantity }}개</td><td>{{ (product.price|int * o.quantity)|won }}원</td></tr>
+                {% else %}<tr><td colspan="4" class="table-empty">아직 이 사이트에서 기록된 주문이 없어요.</td></tr>{% endfor %}
+                </tbody>
+                {% if options %}<tfoot><tr><th scope="row">합계</th><td>{{ orders|length }}건</td><td>{{ quantity }}개</td><td>{{ (product.price|int * quantity)|won }}원</td></tr></tfoot>{% endif %}
+            </table>
+            </div>
+            <p class="manage-hint">실습에서는 실제 결제와 정산이 진행되지 않아요. 금액은 1개당 가격 {{ product.price|won }}원 기준이에요.</p>
+        {% elif tab == 'reviews' %}
+            <div class="panel-row"><h2 class="panel-title">리뷰 <span>({{ reviews|length }})</span></h2>{% if reviews %}<a class="line-btn" href="{{ url_for('view_review', product_id=product.id) }}">리뷰 목록 보기 →</a>{% endif %}</div>
+            {% for r in reviews %}
+            <a class="review-row" href="{{ url_for('review_detail', id=r.id) }}">{{ stars(r.rating) }}<b>{{ r.title }}</b><span class="muted">{{ r.author }} · {{ r.date }}</span></a>
+            {% else %}<p class="table-empty">아직 등록된 리뷰가 없어요.</p>{% endfor %}
+        {% elif tab == 'notice' %}
+            <h2 class="panel-title">공지사항 관리</h2>
+            <form class="notice-form" method="post" action="{{ url_for('manage_notices', product_id=product.id) }}">
+                <label class="sr-only" for="notice-title">공지 제목</label>
+                <input id="notice-title" name="title" maxlength="80" placeholder="예: 최종 시안 및 사이즈 안내" required>
+                <label class="notice-important"><input type="checkbox" name="important" value="1"> 중요</label>
+                <button class="fill-btn" type="submit">공지 등록</button>
+            </form>
+            {% for n in notices %}
+            <div class="notice-row">{% if n.important %}<span class="status-chip active">중요</span>{% else %}<span class="status-chip off">안내</span>{% endif %}<span class="notice-title">{{ n.title }}</span><span class="muted small">{{ n.date }}</span>
+                <form method="post" action="{{ url_for('manage_notices', product_id=product.id) }}"><input type="hidden" name="delete" value="{{ n.id }}"><button class="notice-delete" type="submit" aria-label="{{ n.title }} 공지 삭제">삭제</button></form></div>
+            {% else %}<p class="table-empty">등록한 공지사항이 없어요. 공지는 참여자의 참여 상품 상세 화면에 보여요.</p>{% endfor %}
+        {% else %}
+            <div class="panel-row"><h2 class="panel-title">상품 정보</h2><a class="line-btn" href="{{ url_for('edit_item', product_id=product.id) }}">✎ 수정하기</a></div>
+            <dl class="kv info-kv">
+                <div><dt>카테고리</dt><dd>{{ product.category or '생활 · 패션' }}</dd></div>
+                <div><dt>상품 상태</dt><dd>{{ status_labels.get(product.status, product.status) }}</dd></div>
+                <div><dt>1개당 가격</dt><dd>{{ product.price|won }}원</dd></div>
+                <div><dt>목표 금액</dt><dd>{{ product.target_amount|won ~ '원' if product.target_amount else '미정' }}</dd></div>
+                <div><dt>수령 일시</dt><dd>{{ pickup_text }}</dd></div>
+                <div><dt>수령 장소</dt><dd>{{ product.address }}</dd></div>
+                <div><dt>연락 이메일</dt><dd>{{ product.email }}</dd></div>
+                <div><dt>오픈채팅</dt><dd>{{ product.chat_url or '등록하지 않음' }}</dd></div>
+                <div><dt>제작 업체</dt><dd>{{ product.manufacturer or '미입력' }}</dd></div>
+                <div><dt>상세 설명</dt><dd class="preserve-lines">{{ product.description or '등록된 설명이 없습니다.' }}</dd></div>
+            </dl>
+        {% endif %}
+        </section>
+
+        <aside class="manage-side">
+            <section class="panel">
+                <h2 class="panel-title side-title">빠른 작업</h2>
+                <a class="tool-link" href="{{ url_for('manage', product_id=product.id, tab='notice') }}"><span class="tool-icon">{{ icon('megaphone') }}</span><span><b>공지사항 관리</b><span>참여자에게 공지사항을 전달해요.</span></span><span aria-hidden="true">›</span></a>
+                <a class="tool-link" href="{{ url_for('manage_csv', product_id=product.id) }}"><span class="tool-icon">{{ icon('download') }}</span><span><b>주문 엑셀 다운로드</b><span>참여자 주문 내역을 CSV 파일로 받아요.</span></span><span aria-hidden="true">›</span></a>
+            </section>
+            <section class="panel">
+                <h2 class="panel-title side-title">진행 단계</h2>
+                {% if steps %}{{ step_list(steps, notes=false) }}
+                <p class="steps-note">{% if not f.closed %}모집이 끝나면{% if product.end_date %}({{ product.end_date[5:]|replace('-','.') }}){% endif %} <b>구매 확정</b> 단계로 넘어가요.{% elif not f.received %}수령 일시({{ f.pickup }})가 지나면 <b>종료</b>돼요.{% else %}공동구매가 모두 끝났어요.{% endif %}</p>
+                {% else %}<p class="steps-note">목표 인원 미달로 공동구매가 취소됐어요.</p>{% endif %}
+            </section>
+        </aside>
+    </div>
+</div>
+{% endblock %}

@@ -1,4 +1,36 @@
 {% extends "index.html" %}
 {% block content %}
-<form method="post" action="{{ url_for('signup') }}"><section class="white-card form-card"><div class="form-grid"><label for="email">Email <span class="required-dot">*</span></label><input type="email" id="email" name="email" placeholder="example@ewha.ac.kr" required><label for="username">ID <span class="required-dot">*</span></label><div><div class="input-group"><input id="username" name="username" pattern="[A-Za-z0-9_]{3,30}" placeholder="영문, 숫자, 밑줄 3~30자" required><button class="pill pill-green" type="button" data-check-id>중복 확인</button></div><p class="file-caption" id="id-check-message" aria-live="polite"></p></div><label for="password">PW <span class="required-dot">*</span><small>대문자와 소문자, 숫자를 모두 포함하여 10자 이상</small></label><div class="password-field"><input type="password" id="password" name="password" minlength="10" required autocomplete="new-password"><button class="icon-button" type="button" data-toggle-password="password" aria-label="비밀번호 보기">{{ icon('eye') }}</button></div><label for="password_confirm">PW 확인 <span class="required-dot">*</span></label><div class="password-field"><input type="password" id="password_confirm" name="password_confirm" minlength="10" required autocomplete="new-password"><button class="icon-button" type="button" data-toggle-password="password_confirm" aria-label="비밀번호 확인 보기">{{ icon('eye') }}</button></div><label for="phone">Phone Number <span class="optional-tag">(선택)</span></label><input type="tel" id="phone" name="phone" placeholder="010-0000-0000"><div class="field-label">이화인 인증 <span class="optional-tag">(선택)</span><small>인증 화면 사진을 넣을 자리입니다.<br>현재 실습에서는 실제 학생 인증을 처리하지 않습니다.</small></div><div class="upload-control" data-upload><div class="photo-pair"><div class="photo-slot light"><img data-preview alt="인증 화면 미리보기" hidden></div><label class="photo-slot upload-tile" for="verification_photo">{{ icon('plus') }}<span>사진 미리보기<br>파일 불러오기</span><input type="file" id="verification_photo" accept="image/png,image/jpeg,image/gif,image/webp"></label></div><p class="file-caption" data-file-name>선택한 파일이 없습니다.</p></div><label for="name">이름 <span class="optional-tag">(선택)</span></label><input id="name" name="name" placeholder="이름"><label for="student_id">학번 <span class="optional-tag">(선택)</span></label><input id="student_id" name="student_id" inputmode="numeric" pattern="[0-9]+" placeholder="학번"></div></section><div class="form-actions"><a class="btn btn-white" href="{{ url_for('login') }}">로그인으로</a><button class="btn" type="submit">회원가입</button></div></form>
+<form class="centered-form signup-card" method="post" action="{{ url_for('signup') }}">
+    <section class="signup-section">
+        <h2>계정 정보 <span class="required-tag">필수</span></h2>
+        <label class="field">이름<input id="name" name="name" placeholder="이름" autocomplete="name" required></label>
+        <label class="field">닉네임<input id="nickname" name="nickname" placeholder="닉네임" maxlength="30" required></label>
+        <label class="field">이메일<input type="email" id="email" name="email" placeholder="example@ewha.ac.kr" autocomplete="email" required></label>
+        <div class="field"><label for="username">아이디</label>
+            <div class="id-row"><input id="username" name="username" pattern="[A-Za-z0-9_]{3,30}" placeholder="영문, 숫자, 밑줄 3~30자" autocomplete="username" required><button class="id-check-button" type="button" data-check-id="{{ url_for('check_id') }}">중복 확인</button></div>
+            <span class="id-check" id="id-check-message" aria-live="polite"></span>
+        </div>
+        <div class="field"><label for="password">비밀번호</label><div class="password-field"><input type="password" id="password" name="password" minlength="10" required autocomplete="new-password"><button class="icon-button" type="button" data-toggle-password="password" aria-label="비밀번호 보기">{{ icon('eye') }}</button></div></div>
+        <div class="password-rules" data-password-rules="password"><span data-rule="length">10자 이상</span><span data-rule="case">대·소문자</span><span data-rule="digit">숫자 포함</span></div>
+        <div class="field"><label for="password_confirm">비밀번호 확인</label><div class="password-field"><input type="password" id="password_confirm" name="password_confirm" minlength="10" required autocomplete="new-password"><button class="icon-button" type="button" data-toggle-password="password_confirm" aria-label="비밀번호 확인 보기">{{ icon('eye') }}</button></div></div>
+    </section>
+    <section class="signup-section">
+        <h2>이화인 인증 <span class="required-tag">필수</span></h2>
+        <div class="verify-row upload-control" data-upload>
+            <div class="upload-row">
+                <div class="upload-preview only-selected"><img data-preview alt="선택한 학생증 사진" hidden></div>
+                <label class="upload-add" for="verification_photo">+ 사진<input type="file" id="verification_photo" accept="image/png,image/jpeg,image/gif,image/webp" required></label>
+            </div>
+            <div class="verify-text"><span>학생증 사진</span><p>학생증 사진을 올리면 이화인 인증이 진행돼요. 실습에서는 실제 인증을 처리하지 않아요.</p><p class="file-caption" data-file-name>선택한 파일이 없습니다.</p></div>
+        </div>
+    </section>
+    <section class="signup-section">
+        <label class="field"><span class="field-title">학번 <span class="optional-tag">선택</span></span><input id="student_id" name="student_id" inputmode="numeric" pattern="[0-9]+" placeholder="학번"></label>
+        <label class="field"><span class="field-title">전화번호 <span class="optional-tag">선택</span></span><input type="tel" id="phone" name="phone" placeholder="010-0000-0000"></label>
+    </section>
+    <div class="signup-submit">
+        <button class="btn" type="submit">회원가입</button>
+        <p>이미 계정이 있나요? <a href="{{ url_for('login') }}">로그인</a></p>
+    </div>
+</form>
 {% endblock %}

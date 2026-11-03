@@ -1,4 +1,104 @@
 {% extends "index.html" %}
 {% block content %}
-<section class="white-card account-card"><h2>계정 정보</h2>{% if user %}<dl class="detail-grid"><dt>ID</dt><dd>{{ user.username }}</dd><dt>이름</dt><dd>{{ user.name }}</dd><dt>이메일</dt><dd>{{ user.email }}</dd><dt>학번</dt><dd>{{ user.student_id }}</dd></dl><form method="post" action="{{ url_for('logout') }}"><button class="btn" type="submit">로그아웃</button></form>{% else %}<p>로그인하면 계정 정보를 확인할 수 있어요.</p><a class="btn" href="{{ url_for('login') }}">로그인</a>{% endif %}</section><section class="white-card account-card"><h2>공동구매 참여 내역</h2>{% for order in orders|reverse %}<article class="order-row"><div><strong>{{ order.name }}</strong><p class="muted small">{{ order.color }} / {{ order.size }} · {{ order.quantity }}개 · {{ order.date }}</p></div><a class="btn btn-white" href="{{ url_for('reg_review',product_id=order.product_id) }}">리뷰 작성하기</a></article>{% else %}<p class="muted">이 브라우저에서 기록한 참여 내역이 없습니다.</p>{% endfor %}</section>
+{% macro dday_text(f) %}진행 중{% if f.left is not none %} · {{ 'D-DAY' if f.left == 0 else 'D-' ~ f.left }}{% endif %}{% endmacro %}
+<div class="account-stack">
+{% if profile %}
+    <section class="account-card">
+        <div class="profile-head">
+            <div class="profile-initial" aria-hidden="true">{{ profile.name[-2:][:1] }}</div>
+            <div class="profile-name">
+                <div><h2>{{ profile.name }}</h2><span class="status-chip done">✓ 이화인 인증 완료</span></div>
+                <p>{{ profile.username }}{% if profile.joined_at %} · {{ profile.joined_at }} 가입{% endif %}</p>
+            </div>
+            <div class="profile-actions">
+                <a class="edit-link" href="{{ url_for('account_edit') }}">정보 수정</a>
+                <form method="post" action="{{ url_for('logout') }}"><button class="logout-link" type="submit">로그아웃</button></form>
+            </div>
+        </div>
+        <dl class="profile-info">
+            <div><dt>이메일</dt><dd>{{ profile.email }}</dd></div>
+            <div><dt>아이디</dt><dd>{{ profile.username }}</dd></div>
+            <div><dt>학번</dt><dd class="{{ '' if profile.student_id else 'empty' }}">{{ profile.student_id or '입력하지 않음' }}</dd></div>
+            <div><dt>전화번호</dt><dd class="{{ '' if profile.phone else 'empty' }}">{{ profile.phone or '입력하지 않음' }}</dd></div>
+        </dl>
+    </section>
+    <section class="account-card orders-card">
+        <nav class="group-tabs" aria-label="공동구매 구분">
+            <a class="{{ 'on' if tab == 'joined' else '' }}" href="{{ url_for('account') }}" {% if tab == 'joined' %}aria-current="page"{% endif %}>{{ icon('bag') }}내가 참여한 공동구매</a>
+            <a class="{{ 'on' if tab == 'hosted' else '' }}" href="{{ url_for('account', tab='hosted') }}" {% if tab == 'hosted' %}aria-current="page"{% endif %}>{{ icon('store') }}내가 진행한 공동구매</a>
+        </nav>
+        <div class="orders-head">
+            <h2>{{ '내가 참여한 공동구매' if tab == 'joined' else '내가 진행한 공동구매' }} <span>({{ items|length }})</span></h2>
+            <nav class="sort-pills" aria-label="진행 상태">{% for key,text in [('all','전체'),('open','진행 중'),('closed','마감')] %}<a class="pill {{ 'on' if status == key else '' }}" href="{{ url_for('account', tab=none if tab == 'joined' else tab, status=none if key == 'all' else key) }}" {% if status == key %}aria-current="true"{% endif %}>{{ text }}</a>{% endfor %}</nav>
+        </div>
+        <div class="order-list {{ tab }}">
+        {% for e in items %}{% set f = e.state %}
+        {% if tab == 'joined' %}
+            <article class="order-item">
+                {{ thumb(e.product.image) }}
+                <div class="order-body">
+                    <div>{% if not f.closed %}<span class="status-chip active">{{ dday_text(f) }}</span>
+                    {%- elif f.cancelled %}<span class="status-chip off">목표 미달 · 공동구매 취소</span>
+                    {%- elif f.received and not e.review %}<span class="status-chip wait">구매 확정 · 리뷰 작성 대기</span>
+                    {%- else %}<span class="status-chip done">구매 확정</span>{% endif %}</div>
+                    <b class="order-name">{{ e.product.name }}</b>
+                    <span class="order-meta">{% if e|option %}{{ e|option }} · {% endif %}{{ e.quantity }}개 · {{ e.created_at }} 참여</span>
+                </div>
+                {% if not f.closed %}
+                <div class="order-progress">
+                    {% if f.target %}<span><b>{{ f.progress }}%</b> · {{ f.participants }} / {{ f.target }}명</span><progress value="{{ f.progress }}" max="100" aria-label="공동구매 진행률">{{ f.progress }}%</progress>{% else %}<span>{{ f.participants }}명 참여</span>{% endif %}
+                </div>
+                {% elif f.cancelled %}<span class="order-state">마감 때 목표 인원에 못 미쳤어요</span>
+                {% elif f.received %}<span class="order-state">수령 완료{% if f.pickup %} ({{ f.pickup }}){% endif %}</span>
+                {% else %}<span class="order-state">수령 예정 ({{ f.pickup }})</span>{% endif %}
+                {% if e.review %}<a class="line-btn" href="{{ url_for('review_detail', id=e.review.id) }}">☆ 내 리뷰 보기</a>
+                {% elif f.received %}<a class="fill-btn" href="{{ url_for('reg_review', product_id=e.product.id) }}">리뷰 작성하기</a>
+                {% else %}<a class="line-btn" href="{{ url_for('joined_detail', order_id=e.id) }}">상세보기 ›</a>{% endif %}
+                <a class="order-chevron" href="{{ url_for('joined_detail', order_id=e.id) }}" aria-label="{{ e.product.name }} 참여 상세">›</a>
+            </article>
+        {% else %}
+            <article class="order-item">
+                {{ thumb(e.product.image) }}
+                <div class="order-body">
+                    <div>{% if not f.closed %}<span class="status-chip active">{{ dday_text(f) }}</span>
+                    {%- elif f.cancelled %}<span class="status-chip off">목표 미달 · 취소</span>
+                    {%- elif f.received %}<span class="status-chip off">종료</span>
+                    {%- else %}<span class="status-chip done">모집 완료</span>{% endif %}</div>
+                    <b class="order-name">{{ e.product.name }}</b>
+                    {% if e.product.description %}<span class="order-meta order-desc">{{ e.product.description|truncate(40, true, '…') }}</span>{% endif %}
+                    {% if e.product.start_date or e.product.end_date %}<span class="order-date">📅 {{ e.product.start_date|kdate or '시작일 미정' }} ~ {{ e.product.end_date|kdate or '마감일 미정' }}</span>{% endif %}
+                </div>
+                <div class="hosted-progress">
+                    {% if f.target %}<span>달성률 <b>{{ f.progress }}%</b></span><progress value="{{ f.progress }}" max="100" aria-label="공동구매 달성률">{{ f.progress }}%</progress>{% endif %}
+                    <div class="hosted-meta"><span>참여 <b>{{ f.participants }}명</b>{% if f.target %} / {{ f.target }}명{% endif %}</span><span>예상 금액 <b>{{ (e.product.price|int * f.participants)|won }}원</b></span></div>
+                </div>
+                <div class="hosted-actions"><a class="fill-btn" href="{{ url_for('manage', product_id=e.product.id) }}">관리</a><a class="line-btn" href="{{ url_for('view_review', product_id=e.product.id) }}">☆ 리뷰 보기 ({{ e.reviews }})</a></div>
+                <a class="order-chevron" href="{{ url_for('manage', product_id=e.product.id) }}" aria-label="{{ e.product.name }} 관리">›</a>
+            </article>
+        {% endif %}
+        {% else %}
+            <div class="order-empty">
+                {% if status != 'all' %}<p>해당하는 공동구매가 없어요.</p>
+                {% elif tab == 'joined' %}<p>아직 참여한 공동구매가 없어요.</p><a class="detail-link" href="{{ url_for('view_list') }}">진행 중인 공동구매 둘러보기 →</a>
+                {% else %}<p>아직 진행한 공동구매가 없어요.</p><a class="detail-link" href="{{ url_for('reg_item') }}">공동구매 상품 등록하기 →</a>{% endif %}
+            </div>
+        {% endfor %}
+        </div>
+    </section>
+{% else %}
+    <section class="account-card login-prompt">
+        <div class="lock-icon">{{ icon('lock') }}</div>
+        <div class="login-prompt-text"><h2>계정 정보</h2><p>로그인하면 내 정보와 공동구매 참여 내역을 확인할 수 있어요.</p></div>
+        <div class="login-prompt-actions"><a class="btn" href="{{ url_for('login') }}">로그인</a><a class="detail-link" href="{{ url_for('signup') }}">회원가입 →</a></div>
+    </section>
+    <section class="account-card">
+        <h2 class="locked-title">공동구매 참여 내역</h2>
+        <div class="locked-box">
+            <strong>로그인 후 확인할 수 있어요</strong>
+            <p>참여한 공동구매의 진행 상황과 리뷰 작성 여부를 한눈에 볼 수 있어요.</p>
+            <a class="detail-link" href="{{ url_for('view_list') }}">진행 중인 공동구매 둘러보기 →</a>
+        </div>
+    </section>
+{% endif %}
+</div>
 {% endblock %}

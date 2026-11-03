@@ -1,0 +1,48 @@
+{% extends "index.html" %}
+{% block main_class %}narrow-main{% endblock %}
+{% block header %}{% endblock %}
+{% block content %}
+<div class="done-stack">
+    <section class="panel done-head">
+        <div class="done-check">{{ icon('check') }}</div>
+        <h1>공동구매 참여가 확정됐어요!</h1>
+        <p>진행 소식과 수령 안내는 {{ '아래 오픈채팅방에서' if product.chat_url else '진행자가 등록한 연락처로' }} 진행자가 알려드려요.</p>
+    </section>
+
+    <section class="panel chat-panel">
+        <div class="chat-head">
+            <span class="chat-badge">{{ icon('chat') }}</span>
+            <div><span class="chat-kicker">참여자 전용</span><b>진행자 오픈채팅방</b><span class="chat-sub">{{ product.seller_id }} · {{ product.name }} 참여자방</span></div>
+        </div>
+        {% if product.chat_url %}
+        <div class="chat-actions">
+            <div class="chat-url">{{ icon('link') }}<span id="chat-url">{{ product.chat_url }}</span></div>
+            <button class="chat-copy" type="button" data-copy="{{ product.chat_url }}">링크 복사</button>
+            <a class="chat-enter" href="{{ product.chat_url }}" target="_blank" rel="noopener noreferrer">오픈채팅 입장하기 ↗</a>
+        </div>
+        <p class="chat-note">이 링크는 공동구매에 참여한 이화인에게만 보여요. 마이페이지 › 참여 상품 상세에서도 다시 볼 수 있어요.</p>
+        {% else %}
+        <p class="chat-note">진행자가 아직 오픈채팅 링크를 등록하지 않았어요. 등록되면 마이페이지 › 참여 상품 상세에서 볼 수 있어요.</p>
+        {% endif %}
+    </section>
+
+    <section class="panel">
+        <div class="done-title"><h2 class="panel-title">주문 내역</h2><span class="status-chip done">구매 확정</span></div>
+        <div class="order-line">
+            {{ thumb(product.image) }}
+            <div><b>{{ product.name }}</b><span>{% if order|option %}옵션 {{ order|option }} · {% endif %}수량 {{ order.quantity }}개</span></div>
+            <b>{{ (product.price|int * order.quantity)|won }}원</b>
+        </div>
+        <dl class="kv">
+            <div><dt>주문 번호</dt><dd>{{ order|order_number }}</dd></div>
+            <div><dt>수령 예정</dt><dd>{{ pickup_text }} · {{ product.address }}</dd></div>
+            <div><dt>진행자 연락</dt><dd>{{ '오픈채팅방 또는 ' if product.chat_url }}{{ product.email }}</dd></div>
+        </dl>
+    </section>
+
+    <div class="done-actions">
+        <a class="btn btn-white" href="{{ url_for('view_list') }}">상품 목록으로</a>
+        <a class="btn" href="{{ url_for('joined_detail', order_id=order.id) }}">참여 내역 보기 →</a>
+    </div>
+</div>
+{% endblock %}

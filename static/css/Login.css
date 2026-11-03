@@ -1,7 +1,9 @@
-.login-panel { padding:38px; text-align:center; }
-.login-panel h2 { font-size:18px; }
-.login-panel hr { max-width:260px; margin:22px auto; }
-.login-fields { display:grid; grid-template-columns:40px minmax(0,220px); justify-content:center; align-items:center; gap:18px; margin:30px 0; text-align:left; }
-.login-fields>label { font-weight:700; }
-.login-panel>.btn { min-width:160px; }
-@media(max-width:480px) { .login-panel { padding:28px 20px; } }
+.login-wrap { max-width:460px; display:flex; flex-direction:column; gap:16px; margin-top:52px; }
+.login-card { display:flex; flex-direction:column; gap:18px; padding:40px; background:#fff; border-radius:24px; }
+.login-card .field input { height:54px; padding:0 16px; font-size:16px; }
+.login-card .password-field input { padding-right:46px; }
+.login-submit { min-height:58px; margin-top:6px; font-size:17px; font-weight:800; }
+.login-help { display:flex; justify-content:center; gap:8px; color:var(--muted); font-size:13px; }
+.login-help button { padding:0; background:transparent; color:var(--muted); text-decoration:underline; }
+.login-alt { min-height:52px; background:transparent; font-size:15px; }
+@media(max-width:480px) { .login-wrap { margin-top:16px; } .login-card { padding:28px 20px; } }

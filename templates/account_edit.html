@@ -1,0 +1,11 @@
+{% extends "index.html" %}
+{% block content %}
+<form class="centered-form form-card account-edit" method="post" action="{{ url_for('account_edit') }}">
+    <label class="field">이름<input name="name" value="{{ profile.name }}" autocomplete="name" required></label>
+    <label class="field">닉네임<input name="nickname" value="{{ profile.nickname }}" maxlength="30" required></label>
+    <label class="field">이메일<input type="email" name="email" value="{{ profile.email }}" autocomplete="email" required></label>
+    <label class="field">학번<input name="student_id" value="{{ profile.student_id or '' }}" inputmode="numeric" pattern="[0-9]+" placeholder="학번"></label>
+    <label class="field">전화번호<input type="tel" name="phone" value="{{ profile.phone or '' }}" placeholder="010-0000-0000"></label>
+    <div class="form-submit"><a class="btn btn-white" href="{{ url_for('account') }}">취소</a><button class="btn" type="submit">저장하기</button></div>
+</form>
+{% endblock %}

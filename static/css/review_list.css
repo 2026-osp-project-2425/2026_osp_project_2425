@@ -1,14 +1,39 @@
-.review-card { display:grid; grid-template-columns:auto minmax(0,1fr) auto; gap:18px; align-items:center; }
-.review-card .card-photo .photo-slot { width:128px; }
-.review-card-side { display:flex; flex-direction:column; justify-content:space-between; align-self:stretch; gap:26px; padding:4px 0; }
-.rating-inline { display:flex; align-items:center; gap:16px; color:var(--green); }
-.rating-inline .stars { font-size:19px; letter-spacing:0; }
-.review-excerpt { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
-.satisfaction { text-align:center; }
-.average { font-size:48px; font-weight:700; margin-top:20px; white-space:nowrap; }
-.average small { font-size:18px; font-weight:400; }
-.review-total { display:flex; justify-content:space-between; align-items:center; font-size:13px; margin-bottom:18px; }
-.review-total strong { font-size:24px; }
-.satisfaction .soft-text { text-align:left; }
-@media(max-width:1400px) { .review-card { grid-template-columns:auto minmax(0,1fr); gap:16px; } .review-card-side { grid-column:2; flex-direction:row; align-items:center; padding:0; } .review-card .card-photo { grid-row:1/3; } .review-card .card-photo .photo-slot { width:104px; } }
-@media(max-width:480px) { .review-card .card-photo .photo-slot { width:80px; } .rating-inline { gap:5px; } .rating-inline .stars { font-size:14px; } .review-card h3 { font-size:16px; } }
+.review-title { display:flex; align-items:center; gap:12px; color:var(--green); font-size:24px; font-weight:800; }
+.review-title span { background:var(--soft-green); border-radius:999px; padding:4px 14px; font-size:14px; font-weight:700; }
+.review-sort select { width:140px; height:40px; padding:0 14px; font-size:14px; }
+.review-stack { display:flex; flex-direction:column; gap:20px; }
+.review-card { display:flex; flex-wrap:wrap; gap:22px; padding:28px; background:#fff; border-radius:20px; }
+.review-photo { display:flex; align-items:center; justify-content:center; flex:0 0 128px; height:128px; overflow:hidden; background:var(--placeholder); border-radius:14px; color:#62666a; font-size:13px; }
+.review-photo.empty { background:#f3f2ee; color:#9a9ea1; }
+.review-photo img { width:100%; height:100%; object-fit:cover; display:block; }
+.review-body { flex:1 1 300px; min-width:0; display:flex; flex-direction:column; gap:8px; }
+.review-top { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:8px; }
+.review-option { color:var(--muted); font-size:13px; }
+.review-option b { color:var(--ink); }
+.review-score { display:flex; align-items:center; gap:10px; }
+.review-score b { font-size:16px; }
+.review-body h3 { font-size:22px; font-weight:800; overflow-wrap:anywhere; }
+.review-text { color:var(--body); line-height:1.6; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+.review-foot { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:8px; font-size:14px; }
+.review-foot-right { display:flex; align-items:center; gap:20px; }
+.review-foot time { color:var(--muted); font-size:13px; }
+.review-foot .detail-link { font-weight:700; }
+.pagination .pill { min-width:36px; padding:0 12px; border:0; border-radius:10px; font-size:14px; font-weight:700; }
+.pagination .pill.on { background:var(--green); }
+.satisfaction { display:flex; flex-direction:column; gap:18px; padding:28px 26px; border-radius:24px; }
+.satisfaction h3 { text-align:center; font-size:17px; font-weight:700; }
+.average { text-align:center; }
+.average b { font-size:52px; font-weight:800; line-height:1.2; }
+.average span { color:#d3e6de; font-size:18px; }
+.average-stars { text-align:center; }
+.average-stars .stars { color:var(--star-bright); font-size:26px; letter-spacing:2px; }
+.average-stars .star-off { color:#ffffff40; }
+.distribution { display:flex; flex-direction:column; gap:8px; padding-top:16px; border-top:1px solid #ffffff40; }
+.dist-row { display:grid; grid-template-columns:32px minmax(0,1fr) 20px; align-items:center; gap:10px; color:#d3e6de; font-size:13px; }
+.dist-bar { height:8px; overflow:hidden; border-radius:999px; background:#ffffff2e; }
+.dist-bar div { height:100%; border-radius:999px; background:var(--star-bright); }
+.review-total { display:flex; justify-content:space-between; align-items:baseline; font-size:14px; }
+.review-total b { font-size:24px; }
+.write-review { display:flex; align-items:center; justify-content:center; min-height:52px; border-radius:16px; background:#fff; color:var(--green); font-size:15px; font-weight:800; }
+.write-review:hover { background:#f3f6f4; }
+@media(max-width:480px) { .review-card { padding:20px; } }

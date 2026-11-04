@@ -20,6 +20,11 @@
                 {% if product.description %}<span class="manage-desc">{{ product.description|truncate(60, true, '…') }}</span>{% endif %}
                 <span class="manage-line">📅 {{ product.start_date|kdate or '시작일 미정' }} ~ {{ product.end_date|kdate or '마감일 미정' }}{% if not f.closed and f.left is not none %} <span class="status-chip urgent">{{ 'D-DAY' if f.left == 0 else 'D-' ~ f.left }}</span>{% endif %}</span>
                 <span class="manage-line">👥 목표 인원 <b>{{ f.target ~ '명' if f.target else '미정' }}</b></span>
+                {% if f.cancelled %}
+                <form method="post" action="{{ url_for('delete_item', product_id=product.id) if url_for else '#' }}" onsubmit="return confirm('정말 이 무산된 공동구매 상품을 삭제하시겠습니까?');">
+                    <button class="line-btn urgent-btn" type="submit" style="margin-top:6px; color:var(--urgent); border-color:var(--urgent);">🗑 무산 상품 삭제</button>
+                </form>
+                {% endif %}
             </div>
         </div>
         <div class="manage-progress">
@@ -83,15 +88,50 @@
         {% elif tab == 'notice' %}
             <h2 class="panel-title">공지사항 관리</h2>
             <form class="notice-form" method="post" action="{{ url_for('manage_notices', product_id=product.id) }}">
-                <label class="sr-only" for="notice-title">공지 제목</label>
-                <input id="notice-title" name="title" maxlength="80" placeholder="예: 최종 시안 및 사이즈 안내" required>
-                <label class="notice-important"><input type="checkbox" name="important" value="1"> 중요</label>
-                <button class="fill-btn" type="submit">공지 등록</button>
+                <div class="notice-inputs">
+                    <input id="notice-title" name="title" maxlength="80" placeholder="공지 제목 (예: 최종 시안 및 수령 안내)" required>
+                    <textarea id="notice-body" name="content" placeholder="공지 본문 내용을 입력해 주세요." rows="3"></textarea>
+                </div>
+                <div class="notice-form-foot">
+                    <label class="notice-important"><input type="checkbox" name="important" value="1"> 중요 공지</label>
+                    <button class="fill-btn" type="submit">공지 등록</button>
+                </div>
             </form>
             {% for n in notices %}
-            <div class="notice-row">{% if n.important %}<span class="status-chip active">중요</span>{% else %}<span class="status-chip off">안내</span>{% endif %}<span class="notice-title">{{ n.title }}</span><span class="muted small">{{ n.date }}</span>
-                <form method="post" action="{{ url_for('manage_notices', product_id=product.id) }}"><input type="hidden" name="delete" value="{{ n.id }}"><button class="notice-delete" type="submit" aria-label="{{ n.title }} 공지 삭제">삭제</button></form></div>
+            <div class="notice-row">
+                {% if n.important %}<span class="status-chip active">중요</span>{% else %}<span class="status-chip off">안내</span>{% endif %}
+                <div class="notice-content">
+                    <b>{{ n.title }}</b>
+                    {% if n.content %}<p class="notice-text">{{ n.content }}</p>{% endif %}
+                    <span class="muted small">{{ n.date }}</span>
+                </div>
+                <div class="notice-actions">
+                    <button class="notice-edit-btn line-btn" type="button" data-notice-edit="{{ n.id }}" data-title="{{ n.title }}" data-content="{{ n.content or '' }}">✎ 수정</button>
+                    <form method="post" action="{{ url_for('manage_notices', product_id=product.id) }}"><input type="hidden" name="delete" value="{{ n.id }}"><button class="notice-delete" type="submit" aria-label="{{ n.title }} 공지 삭제">삭제</button></form>
+                </div>
+            </div>
             {% else %}<p class="table-empty">등록한 공지사항이 없어요. 공지는 참여자의 참여 상품 상세 화면에 보여요.</p>{% endfor %}
+        {% elif tab == 'contact' or tab == 'qna' %}
+            <h2 class="panel-title">문의 목록 및 답변</h2>
+            {% for q in qna_list|default([]) %}
+            <div class="qna-card">
+                <div class="qna-head">
+                    <span class="status-chip {{ 'done' if q.answer else 'wait' }}">{{ '답변 완료' if q.answer else '답변 대기' }}</span>
+                    <span class="status-chip {{ 'off' if q.is_private else 'soft' }}">{{ '비공개 (판매자에게만)' if q.is_private else '전체 공개' }}</span>
+                    <span class="muted small">{{ q.author }} · {{ q.date }}</span>
+                </div>
+                <p class="qna-question"><b>Q.</b> {{ q.question }}</p>
+                {% if q.answer %}
+                <div class="qna-answer-box"><b>A.</b> {{ q.answer }}</div>
+                {% else %}
+                <form class="qna-answer-form" method="post" action="{{ url_for('manage_qna', product_id=product.id) if url_for else '#' }}">
+                    <input type="hidden" name="qna_id" value="{{ q.id }}">
+                    <textarea name="answer" placeholder="답변을 입력해 주세요" required rows="2"></textarea>
+                    <button class="fill-btn small-btn" type="submit">답변 등록</button>
+                </form>
+                {% endif %}
+            </div>
+            {% else %}<p class="table-empty">아직 등록된 문의가 없습니다.</p>{% endfor %}
         {% else %}
             <div class="panel-row"><h2 class="panel-title">상품 정보</h2><a class="line-btn" href="{{ url_for('edit_item', product_id=product.id) }}">✎ 수정하기</a></div>
             <dl class="kv info-kv">

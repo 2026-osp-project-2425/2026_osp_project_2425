@@ -22,6 +22,7 @@
             <div><dt>전화번호</dt><dd class="{{ '' if profile.phone else 'empty' }}">{{ profile.phone or '입력하지 않음' }}</dd></div>
         </dl>
     </section>
+    
     <section class="account-card orders-card">
         <nav class="group-tabs" aria-label="공동구매 구분">
             <a class="{{ 'on' if tab == 'joined' else '' }}" href="{{ url_for('account') }}" {% if tab == 'joined' %}aria-current="page"{% endif %}>{{ icon('bag') }}내가 참여한 공동구매</a>
@@ -83,6 +84,16 @@
                 {% else %}<p>아직 진행한 공동구매가 없어요.</p><a class="detail-link" href="{{ url_for('reg_item') }}">공동구매 상품 등록하기 →</a>{% endif %}
             </div>
         {% endfor %}
+        </div>
+    </section>
+
+    <!-- 임시저장 글 목록 섹션 -->
+    <section class="account-card draft-section" style="margin-top:20px;">
+        <div class="orders-head">
+            <h2>임시저장 글 <span id="draft-count">(0)</span></h2>
+        </div>
+        <div id="draft-list-container" class="order-list">
+            <p class="table-empty">이 브라우저에 임시저장된 글이 없어요.</p>
         </div>
     </section>
 {% else %}

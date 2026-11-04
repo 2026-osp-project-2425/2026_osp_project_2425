@@ -21,7 +21,7 @@
                 <div><dt>목표 인원</dt><dd>{{ f.target ~ '명' if f.target else '미정' }}</dd></div>
                 <div><dt>가격</dt><dd class="joined-price">{{ product.price|won }}원</dd></div>
             </dl>
-            {% if product.chat_url %}
+            {% if product.chat_url and (f.confirmed or (f.closed and not f.cancelled)) %}
             <div class="chat-strip">
                 <span class="chat-badge">{{ icon('chat') }}</span>
                 <span class="chat-strip-text"><span>참여자 전용 · 진행자 오픈채팅방</span><span>{{ product.chat_url }}</span></span>
@@ -78,7 +78,9 @@
         {% else %}
             <p class="news-lead">상품이나 수령에 대한 문의는 진행자에게 직접 해 주세요.</p>
             <div class="news-row"><span class="status-chip off">이메일</span><a href="mailto:{{ product.email }}">{{ product.email }}</a></div>
-            {% if product.chat_url %}<div class="news-row"><span class="status-chip off">오픈채팅</span><a href="{{ product.chat_url }}" target="_blank" rel="noopener noreferrer">진행자 오픈채팅방 입장하기 ↗</a></div>{% endif %}
+            {% if product.chat_url and (f.confirmed or (f.closed and not f.cancelled)) %}
+            <div class="news-row"><span class="status-chip off">오픈채팅</span><a href="{{ product.chat_url }}" target="_blank" rel="noopener noreferrer">진행자 오픈채팅방 입장하기 ↗</a></div>
+            {% endif %}
         {% endif %}
     </section>
 </div>

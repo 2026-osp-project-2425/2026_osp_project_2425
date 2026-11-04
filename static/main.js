@@ -492,3 +492,52 @@
             });
         });
     }
+
+    // 마이페이지 임시저장 목록 파싱
+    const draftContainer = document.getElementById('draft-list-container');
+    const draftCountEl = document.getElementById('draft-count');
+
+    if (draftContainer) {
+        const draftItems = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith('draft:')) {
+                try {
+                    const data = JSON.parse(localStorage.getItem(key));
+                    draftItems.push({ key, name: data.name || key.replace('draft:', '임시저장 글 '), data });
+                } catch (e) {
+                    // JSON 파싱 에러 방지
+                }
+            }
+        }
+
+        if (draftCountEl) draftCountEl.textContent = `(${draftItems.length})`;
+
+        if (draftItems.length > 0) {
+            draftContainer.innerHTML = draftItems.map(item => `
+                <article class="order-item" style="justify-content:space-between;">
+                    <div class="order-body">
+                        <span class="status-chip wait">임시저장</span>
+                        <b class="order-name">${item.name}</b>
+                        <span class="order-meta">키: ${item.key}</span>
+                    </div>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <a class="fill-btn" href="/registration">이어서 작성</a>
+                        <button class="line-btn" type="button" onclick="localStorage.removeItem('${item.key}'); location.reload();">삭제</button>
+                    </div>
+                </article>
+            `).join('');
+        }
+    }
+
+    // 공지사항 수정 버튼 클릭 처리
+    document.querySelectorAll('[data-notice-edit]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const titleInput = document.getElementById('notice-title');
+            const contentInput = document.getElementById('notice-body');
+            if (titleInput) titleInput.value = btn.dataset.title || '';
+            if (contentInput) contentInput.value = btn.dataset.content || '';
+            titleInput?.focus();
+            titleInput?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        });
+    });

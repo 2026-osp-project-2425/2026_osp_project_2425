@@ -355,14 +355,26 @@
 
     const productForm = document.getElementById('product-form');
     if (productForm) {
-        const todayStr = new Date().toISOString().split('T')[0]; // 날짜 자동 설정
+        const todayStr = new Date().toISOString().split('T')[0];
         const startDateInput = document.getElementById('start_date');
         const endDateInput = document.getElementById('end_date');
         const pickupDateInput = document.getElementById('pickup_date');
-        
+
         if (startDateInput) startDateInput.min = todayStr;
         if (endDateInput) endDateInput.min = todayStr;
         if (pickupDateInput) pickupDateInput.min = todayStr;
+
+        // 시작일 선택 시 마감일의 최소 날짜(min)를 시작일로 동적 연동
+        if (startDateInput && endDateInput) {
+            startDateInput.addEventListener('change', () => {
+                if (startDateInput.value) {
+                    endDateInput.min = startDateInput.value;
+                    if (endDateInput.value && endDateInput.value < startDateInput.value) {
+                        endDateInput.value = startDateInput.value;
+                    }
+                }
+            });
+        }
 
         const priceDisplay = document.getElementById('price_display');
         const priceHidden = document.getElementById('price');
@@ -399,24 +411,67 @@
         if (pickupTime) pickupTime.addEventListener('change', updatePickupDatetime);
 
         productForm.addEventListener('submit', (event) => {
-            let firstInvalid = null;
+            const invalidFields = [];
             const requiredFields = productForm.querySelectorAll('[required]');
-            
+
             requiredFields.forEach((field) => {
                 const targetEl = field.id === 'price' ? priceDisplay : field;
                 if (!field.value.trim()) {
-                    targetEl.style.borderColor = 'var(--urgent)';
-                    if (!firstInvalid) firstInvalid = targetEl;
+                    targetEl.classList.add('field-invalid');
+                    invalidFields.push(targetEl);
                 } else {
-                    targetEl.style.borderColor = 'var(--field-line)';
+                    targetEl.classList.remove('field-invalid');
                 }
             });
 
-            if (firstInvalid) {
+            // 마감일이 시작일보다 빠른 경우 예외 처리
+            if (startDateInput && endDateInput && startDateInput.value && endDateInput.value) {
+                if (endDateInput.value < startDateInput.value) {
+                    endDateInput.classList.add('field-invalid');
+                    if (!invalidFields.includes(endDateInput)) {
+                        invalidFields.push(endDateInput);
+                    }
+                }
+            }
+
+            if (invalidFields.length > 0) {
                 event.preventDefault();
                 event.stopPropagation();
-                firstInvalid.focus();
-                firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                invalidFields.sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top);
+                const topErrorEl = invalidFields[0];
+
+                topErrorEl.focus();
+                topErrorEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
+        });
+    }
+
+    // 랭킹 카테고리 필터링
+    const rankFilters = document.querySelectorAll('.rank-filters a');
+    if (rankFilters.length > 0) {
+        const rankItems = document.querySelectorAll('.rank-list li');
+
+        rankFilters.forEach((tab) => {
+            tab.addEventListener('click', (e) => {
+                e.preventDefault();
+
+                const isAlreadyOn = tab.classList.contains('on');
+                rankFilters.forEach((t) => t.classList.remove('on'));
+
+                const targetCategory = isAlreadyOn ? null : (tab.dataset.rankTag || tab.textContent.trim());
+                if (!isAlreadyOn) {
+                    tab.classList.add('on');
+                }
+
+                rankItems.forEach((item) => {
+                    const itemCat = item.dataset.category || '';
+                    if (!targetCategory || itemCat === targetCategory) {
+                        item.style.display = '';
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+            });
         });
     }

@@ -119,8 +119,8 @@
 </section>
 <aside class="right-rail">
     <section class="green-panel rank-panel"><h3>실시간 상품 랭킹</h3>
-        <div class="rank-filters">{% for tag in categories %}<a class="{{ 'on' if category == tag else '' }}" href="{{ url_for('view_list', status=status, category=none if category == tag else tag) }}" {% if category == tag %}aria-current="true"{% endif %}>{{ tag }}</a>{% endfor %}</div>
-        <ol class="rank-list">{% for p in ranking %}<li><span>{{ loop.index }}</span><a href="{{ url_for('product_detail',id=p.id) }}"><strong>{{ p.name }}</strong><small>{{ p.participants }}명 참여</small></a></li>{% endfor %}</ol>
+        <div class="rank-filters">{% for tag in categories %}<a class="{{ 'on' if category == tag else '' }}" href="#" data-rank-tag="{{ tag }}">{{ tag }}</a>{% endfor %}</div>
+        <ol class="rank-list">{% for p in ranking %}<li data-category="{{ p.category }}"><span>{{ loop.index }}</span><a href="{{ url_for('product_detail',id=p.id) }}"><strong>{{ p.name }}</strong><small>{{ p.participants }}명 참여</small></a></li>{% endfor %}</ol>
         <p class="rank-note">공동구매 참여 인원 기준</p>
     </section>
     <a class="btn btn-white rank-register" href="{{ url_for('reg_item') }}">+ 상품 등록하기</a>

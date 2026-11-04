@@ -4,7 +4,7 @@
 .profile-head { display:flex; flex-wrap:wrap; align-items:center; gap:20px; }
 .profile-initial { display:flex; align-items:center; justify-content:center; flex-shrink:0; width:72px; height:72px; border-radius:50%; background:var(--soft-green); color:var(--green); font-size:28px; font-weight:800; }
 .profile-name { flex:1 1 240px; min-width:0; }
-.profile-name>div { display:flex; flex-wrap:wrap; align-items:center; gap:10px; }
+.profile-name> { display:flex; flex-wrap:wrap; align-items:center; gap:10px; }
 .profile-name p { margin:4px 0 0; color:var(--muted); font-size:14px; }
 .profile-actions { display:flex; flex-wrap:wrap; gap:10px; }
 .orders-head .sort-pills { margin-right: 10px; }

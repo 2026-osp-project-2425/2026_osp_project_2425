@@ -1,7 +1,17 @@
 {% extends "index.html" %}
 {% block content %}
 <div class="form-stack">
-    <form class="product-select" method="get"><label for="product_id">상품 선택</label><select id="product_id" name="product_id" data-auto-submit>{% for p in products %}<option value="{{ p.id }}" {{ 'selected' if p.id==product.id }}>{{ p.name }}</option>{% endfor %}</select><button class="sr-only" type="submit">상품 선택 적용</button></form>
+    <form class="product-select" method="get">
+        <label for="product_id">상품 선택</label>
+        <select id="product_id" name="product_id" data-auto-submit>
+            {% for item in joined_items %}
+            <option value="{{ item.product.id }}" {{ 'selected' if item.product.id == product.id }}>{{ item.product.name }}</option>
+            {% else %}
+            <option value="" disabled selected>참여 완료한 공동구매가 없습니다.</option>
+            {% endfor %}
+        </select>
+        <button class="sr-only" type="submit">상품 선택 적용</button>
+    </form>
     <section class="green-panel writing-product">
         <p class="writing-label">리뷰 작성 중인 상품</p>
         <div class="writing-row">

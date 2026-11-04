@@ -6,9 +6,8 @@
 .chat-field .chat-badge .icon { width:16px; height:16px; }
 .field .chat-field input { height:auto; padding:0; border:0; outline:0; }
 /* 숨긴 구매 옵션 칸은 번호를 세지 않도록 번호를 CSS로 매긴다. */
-.product-form { counter-reset:form-section; }
-.product-form .form-card:not([hidden]) { counter-increment:form-section; }
-.product-form .section-num::before { counter-increment: section; content: counter(section); }
+.product-form { counter-reset: form-section; }
+.product-form .form-card:not([hidden]) .section-num::before { counter-increment: form-section; content: counter(form-section); }
 .option-section { border:1.5px solid #cfe0d7; }
 .option-section[hidden] { display:none; }
 .option-section .section-head { flex-wrap:wrap; }

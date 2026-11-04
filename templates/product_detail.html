@@ -3,12 +3,23 @@
 <div class="detail-layout">
     <div class="detail-main">
         <section class="detail-card detail-summary">
+            {% set photos = product.images or ([product.image] if product.image else []) %}
             <div class="detail-gallery">
-                <div class="photo-main">{% if product.image %}<img src="{{ url_for('static', filename=product.image) }}" alt="{{ product.name }} 대표 사진">{% else %}상품 대표 사진{% endif %}</div>
-                <div class="photo-thumbs">
-                    <div class="photo-thumb on">{% if product.image %}<img src="{{ url_for('static', filename=product.image) }}" alt="">{% else %}1{% endif %}</div>
-                    <div class="photo-thumb">2</div>
+                <div class="photo-main">
+                    {% if photos %}
+                    <img src="{{ url_for('static', filename=photos[0]) }}" alt="{{ product.name }} 대표 사진">
+                    {% else %}
+                    <div class="default-img"></div>
+                    {% endif %}
                 </div>
+                {% if photos|length > 1 %}
+                <div class="photo-thumbs">
+                    {% for img in photos %}
+                    <div class="photo-thumb {{ 'on' if loop.first else '' }}"><img src="{{ url_for('static', filename=img) }}" alt=""></div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
             </div>
             <div class="detail-info">
                 <div class="detail-tags">

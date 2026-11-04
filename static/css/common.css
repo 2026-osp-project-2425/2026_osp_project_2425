@@ -80,6 +80,7 @@ form { margin:0; }
 
 .default-img, .photo-slot, .thumb, .upload-preview { background: var(--placeholder); }
 .default-img::before, .photo-slot::before, .thumb::before, .upload-preview::before { display: none !important; }
+.upload-preview .remove-btn { position:absolute; top:4px; right:4px; background:rgba(0,0,0,0.6); color:#fff; border:0; border-radius:50%; width:22px; height:22px; cursor:pointer; font-size:12px; display:flex; align-items:center; justify-content:center; z-index:2; }
 
 .photo-slot { background:linear-gradient(135deg, var(--green-dark), var(--green)); border-radius:var(--radius-btn); width:clamp(116px,13vw,170px); aspect-ratio:1; overflow:hidden; flex-shrink:0; display:flex; align-items:center; justify-content:center; position:relative; }
 .photo-slot::before { content:""; width:36%; height:36%; border-radius:var(--radius-pill); background:var(--soft-green); opacity:.85; }

@@ -1,52 +1,69 @@
     document.querySelectorAll('[data-upload]').forEach((dropZone) => {
         const fileInput = dropZone.querySelector('input[type=file]');
-        const preview = dropZone.querySelector('[data-preview]');
+        const uploadRow = dropZone.querySelector('.upload-row');
+        const uploadAdd = dropZone.querySelector('.upload-add');
         const fileName = dropZone.querySelector('[data-file-name]');
-        let previewUrl = null;
+        const defaultPreview = dropZone.querySelector('[data-preview]')?.closest('.upload-preview');
 
-        function updatePreview() {
-            if (previewUrl) URL.revokeObjectURL(previewUrl);
-            previewUrl = null;
-            preview.hidden = true;
-            preview.removeAttribute('src');
-            fileInput.setCustomValidity('');
-            const file = fileInput.files[0];
-            if (!file) {
+        let accumulatedFiles = [];
+
+        function renderPreviews() {
+            uploadRow.querySelectorAll('.dynamic-preview').forEach((el) => el.remove());
+
+            const dt = new DataTransfer();
+            accumulatedFiles.forEach((f) => dt.items.add(f));
+            fileInput.files = dt.files;
+
+            if (!accumulatedFiles.length) {
                 fileName.textContent = '선택한 파일이 없습니다.';
+                if (defaultPreview) defaultPreview.style.display = '';
                 return;
             }
-            if (!/\.(png|jpe?g|gif|webp)$/i.test(file.name)) {
-                fileInput.setCustomValidity('PNG, JPG, GIF, WEBP 사진 파일을 선택해 주세요.');
-                fileName.textContent = '사진 파일 형식을 확인해 주세요.';
-                fileInput.reportValidity();
-                return;
-            }
-            fileName.textContent = file.name;
-            previewUrl = URL.createObjectURL(file);
-            preview.src = previewUrl;
-            preview.hidden = false;
+
+            fileName.textContent = `${accumulatedFiles.length}개의 사진 선택됨 (${accumulatedFiles.map((f) => f.name).join(', ')})`;
+            if (defaultPreview) defaultPreview.style.display = 'none';
+
+            accumulatedFiles.forEach((file, index) => {
+                const div = document.createElement('div');
+                div.className = 'upload-preview dynamic-preview';
+
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(file);
+                div.appendChild(img);
+
+                const removeBtn = document.createElement('button');
+                removeBtn.type = 'button';
+                removeBtn.className = 'remove-btn';
+                removeBtn.textContent = '✕';
+                removeBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    accumulatedFiles.splice(index, 1);
+                    renderPreviews();
+                });
+                div.appendChild(removeBtn);
+
+                uploadRow.insertBefore(div, uploadAdd);
+            });
         }
 
-        fileInput.addEventListener('change', updatePreview);
-        dropZone.addEventListener('dragover', (event) => {
-            event.preventDefault();
-            dropZone.classList.add('drag-over');
+        fileInput.addEventListener('change', () => {
+            const newFiles = Array.from(fileInput.files || []);
+            accumulatedFiles = accumulatedFiles.concat(newFiles);
+            fileInput.value = '';
+            renderPreviews();
         });
-        dropZone.addEventListener('dragleave', () => {
+
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
             dropZone.classList.remove('drag-over');
-        });
-        dropZone.addEventListener('drop', (event) => {
-            event.preventDefault();
-            dropZone.classList.remove('drag-over');
-            const file = event.dataTransfer.files[0];
-            if (!file) return;
-            const transfer = new DataTransfer();
-            transfer.items.add(file);
-            fileInput.files = transfer.files;
-            updatePreview();
+            if (e.dataTransfer.files.length) {
+                accumulatedFiles = accumulatedFiles.concat(Array.from(e.dataTransfer.files));
+                renderPreviews();
+            }
         });
     });
-
     if (document.getElementById("option-form")) {
         const optionForm = document.getElementById('option-form');
         const quantity = document.getElementById('quantity');

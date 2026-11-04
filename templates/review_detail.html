@@ -8,10 +8,14 @@
         <div class="review-rating">{{ stars(review.rating) }}<b>{{ '%.1f'|format(review.rating) }}</b><span>{{ rating_labels[review.rating] }}</span></div>
         <p class="review-byline">{{ review.author }} · {{ review.date }}</p>
     </div>
+    {% set photos = review.images or ([review.image] if review.image else []) %}
+    {% if photos %}
     <div class="review-photos">
-        <div class="review-photo">{% if review.image %}<img src="{{ url_for('static', filename=review.image) }}" alt="리뷰 사진">{% else %}리뷰 사진 1{% endif %}</div>
-        <div class="review-photo">리뷰 사진 2</div>
+        {% for img in photos %}
+        <div class="review-photo"><img src="{{ url_for('static', filename=img) }}" alt="리뷰 사진"></div>
+        {% endfor %}
     </div>
+    {% endif %}
     <p class="review-content preserve-lines">{{ review.description }}</p>
 </article>
 <div class="review-back"><a class="detail-link" href="{{ url_for('view_review', product_id=product.id) }}">리뷰 목록으로 →</a></div>

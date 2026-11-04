@@ -10,7 +10,8 @@
         <div class="review-stack">
         {% for r in reviews %}
             <article class="review-card">
-                <a class="review-photo {{ '' if r.image else 'empty' }}" href="{{ url_for('review_detail',id=r.id) }}" aria-label="{{ r.title }} 자세히 보기">{% if r.image %}<img src="{{ url_for('static', filename=r.image) }}" alt="">{% else %}사진 없음{% endif %}</a>
+                {% set r_photo = (r.images[0] if r.images else None) or r.image %}
+                <a class="review-photo {{ '' if r_photo else 'default-img' }}" href="{{ url_for('review_detail',id=r.id) }}" aria-label="{{ r.title }} 자세히 보기">{% if r_photo %}<img src="{{ url_for('static', filename=r_photo) }}" alt="">{% endif %}</a>
                 <div class="review-body">
                     <div class="review-top">
                         <span class="review-option">{% if not product %}{{ products[r.product_id].name }}{% if r|option %} · {% endif %}{% endif %}{% if r|option %}구매 옵션 <b>{{ r|option }}</b>{% endif %}</span>

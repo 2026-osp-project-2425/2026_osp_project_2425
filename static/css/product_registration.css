@@ -8,7 +8,7 @@
 /* 숨긴 구매 옵션 칸은 번호를 세지 않도록 번호를 CSS로 매긴다. */
 .product-form { counter-reset:form-section; }
 .product-form .form-card:not([hidden]) { counter-increment:form-section; }
-.product-form .section-num::before { content:counter(form-section); }
+.product-form .section-num::before { counter-increment: section; content: counter(section); }
 .option-section { border:1.5px solid #cfe0d7; }
 .option-section[hidden] { display:none; }
 .option-section .section-head { flex-wrap:wrap; }
@@ -41,3 +41,9 @@
 .option-presets .hint { margin-right:2px; }
 .option-preset { display:inline-flex; align-items:center; min-height:32px; padding:0 10px; border:1px solid var(--field-line); border-radius:999px; background:#fff; color:var(--body); font-size:12px; font-weight:600; }
 .option-preset:hover { border-color:var(--green); color:var(--green); }
+.field-label { display:flex; align-items:center; gap:8px; margin-bottom: 8px; }
+.pickup-time-group { display:flex; gap:6px; width:100%; }
+.pickup-time-group .pickup-date { flex:2; min-width:0; }
+.pickup-time-group .pickup-ampm, .pickup-time-group .pickup-time { flex:1; min-width:0; }
+.field-manufacturer { margin-bottom:12px; }
+.field-invalid { border-color:var(--urgent) !important; }

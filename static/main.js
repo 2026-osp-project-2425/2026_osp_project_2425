@@ -352,3 +352,71 @@
             status.textContent = await copyText(url) ? '상품 링크를 복사했어요.' : `링크를 직접 복사해 주세요: ${url}`;
         });
     });
+
+    const productForm = document.getElementById('product-form');
+    if (productForm) {
+        const todayStr = new Date().toISOString().split('T')[0]; // 날짜 자동 설정
+        const startDateInput = document.getElementById('start_date');
+        const endDateInput = document.getElementById('end_date');
+        const pickupDateInput = document.getElementById('pickup_date');
+        
+        if (startDateInput) startDateInput.min = todayStr;
+        if (endDateInput) endDateInput.min = todayStr;
+        if (pickupDateInput) pickupDateInput.min = todayStr;
+
+        const priceDisplay = document.getElementById('price_display');
+        const priceHidden = document.getElementById('price');
+        if (priceDisplay && priceHidden) {
+            const formatPrice = (val) => {
+                const nums = String(val).replace(/[^0-9]/g, '');
+                priceHidden.value = nums;
+                priceDisplay.value = nums ? Number(nums).toLocaleString('ko-KR') : '';
+            };
+            formatPrice(priceDisplay.value);
+            priceDisplay.addEventListener('input', (e) => formatPrice(e.target.value));
+        }
+
+        const pickupDate = document.getElementById('pickup_date');
+        const pickupAmpm = document.getElementById('pickup_ampm');
+        const pickupTime = document.getElementById('pickup_time');
+        const pickupHidden = document.getElementById('pickup_datetime');
+
+        if (pickupHidden && pickupHidden.value) {
+            const parts = pickupHidden.value.split(' ');
+            if (parts[0] && pickupDate) pickupDate.value = parts[0];
+            if (parts[1] && pickupAmpm) pickupAmpm.value = parts[1];
+            if (parts[2] && pickupTime) pickupTime.value = parts[2];
+        }
+
+        const updatePickupDatetime = () => {
+            if (pickupDate && pickupDate.value && pickupHidden) {
+                pickupHidden.value = `${pickupDate.value} ${pickupAmpm ? pickupAmpm.value : ''} ${pickupTime ? pickupTime.value : ''}`.trim();
+            }
+        };
+
+        if (pickupDate) pickupDate.addEventListener('change', updatePickupDatetime);
+        if (pickupAmpm) pickupAmpm.addEventListener('change', updatePickupDatetime);
+        if (pickupTime) pickupTime.addEventListener('change', updatePickupDatetime);
+
+        productForm.addEventListener('submit', (event) => {
+            let firstInvalid = null;
+            const requiredFields = productForm.querySelectorAll('[required]');
+            
+            requiredFields.forEach((field) => {
+                const targetEl = field.id === 'price' ? priceDisplay : field;
+                if (!field.value.trim()) {
+                    targetEl.style.borderColor = 'var(--urgent)';
+                    if (!firstInvalid) firstInvalid = targetEl;
+                } else {
+                    targetEl.style.borderColor = 'var(--field-line)';
+                }
+            });
+
+            if (firstInvalid) {
+                event.preventDefault();
+                event.stopPropagation();
+                firstInvalid.focus();
+                firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        });
+    }

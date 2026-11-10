@@ -60,8 +60,8 @@ class DBhandler:
         name = str(name).strip()
         if not name:
             raise ValueError("상품명을 입력해 주세요.")
-        if re.search(r"[\x00-\x1f\x7f]", name) or len(name.encode("utf-8")) > 768:
-            raise ValueError("상품명에 제어 문자를 사용할 수 없으며 768바이트 이내로 입력해야 합니다.")
+        if re.search(r"[.#$\[\]/\x00-\x1f\x7f]", name) or len(name.encode("utf-8")) > 768:
+            raise ValueError("상품명에는 . # $ [ ] / 및 제어 문자를 사용할 수 없으며 768바이트 이내여야 합니다.")
         return name
 
     @staticmethod
@@ -71,15 +71,16 @@ class DBhandler:
         return "/media/" + image.split("/", 1)[1] if image.startswith("shared/") else "/static/" + image
 
     def item_payload(self, data, img_path=None):
-        item = {key: value for key, value in data.items() if not key.startswith("_") and key not in {"id", "local_id"}}
+        item = {key: value for key, value in data.items() if not key.startswith("_") and key not in {"id", "local_id", "product_id"}}
         item["name"] = self.validate_item_name(item.get("name", ""))
         item["img_path"] = img_path if img_path is not None else self.image_path(item.get("image", ""))
         return item
 
     @staticmethod
     def normalize_item(key, item):
-        # Old /item/상품명 nodes keep their original Firebase key as a stable ID.
-        product = dict(item, id=str(key))
+        # The Firebase key is the product name; product_id is immutable.
+        # Pre-migration records still use their previous key until migrated.
+        product = dict(item, id=str(item.get("product_id") or key))
         product.pop("local_id", None)
         if not product.get("image"):
             path = product.get("img_path") or ""
@@ -102,38 +103,65 @@ class DBhandler:
 
     @shared_operation
     def get_item(self, product_id):
-        if not self.valid_key(product_id):
-            return None
-        value = self.ref("item").child(product_id).get()
-        return self.normalize_item(product_id, value) if isinstance(value, dict) and value.get("name") else None
+        product_id = str(product_id)
+        matches = [item for item in self.get_items() if item["id"] == product_id]
+        if len(matches) > 1:
+            raise SharedStoreError("중복된 상품 ID가 있습니다. 상품 데이터를 확인해 주세요.")
+        return matches[0] if matches else None
 
     @shared_operation
     def insert_item(self, data, img_path=None):
         item = self.item_payload(data, img_path)
+        # UUID is global across computers; the name remains the Firebase key.
+        product_id = "p_" + uuid4().hex
+        item["product_id"] = product_id
         item.setdefault("created_at", datetime.now(timezone.utc).isoformat())
         item.setdefault("participants", 0)
-        return self.ref("item").push(item).key
 
-    @shared_operation
-    def update_item(self, product_id, data):
-        if not self.valid_key(product_id):
-            raise ValueError("상품 ID를 확인해 주세요.")
-        item = self.item_payload(data)
-        def update(current):
-            if not isinstance(current, dict):
-                raise ValueError("수정할 상품이 없습니다.")
-            return dict(current, **item)
-        self.ref("item").child(product_id).transaction(update)
+        def create(current):
+            if current is not None:
+                raise DuplicateItemError("이미 등록된 상품명입니다. 다른 상품명을 입력해 주세요.")
+            return item
 
-    @shared_operation
-    def add_participants(self, product_id, quantity):
-        if not self.valid_key(product_id):
-            raise ValueError("상품 ID를 확인해 주세요.")
+        self.ref("item").child(item["name"]).transaction(create)
+        return product_id
+
+    def _mutate_item(self, product_id, transform):
+        product_id = str(product_id)
+
         def update(current):
             if not isinstance(current, dict):
                 raise ValueError("상품이 없습니다.")
-            return dict(current, participants=int(current.get("participants", 0)) + int(quantity))
-        self.ref("item").child(product_id).transaction(update)
+            entries = dict(current)
+            matches = [(key, value) for key, value in entries.items()
+                       if isinstance(value, dict)
+                       and str(value.get("product_id") or key) == product_id]
+            if len(matches) != 1:
+                raise ValueError("상품 ID가 없거나 중복되어 있습니다.")
+            old_key, previous = matches[0]
+            item = dict(transform(dict(previous)), product_id=product_id)
+            name = self.validate_item_name(item.get("name", ""))
+            item["name"] = name
+            if name != old_key and name in entries:
+                raise DuplicateItemError("이미 등록된 상품명입니다. 다른 상품명을 입력해 주세요.")
+            entries.pop(old_key)
+            entries[name] = item
+            return entries
+
+        # Rename and content changes commit together. Existing product_id stays.
+        self.ref("item").transaction(update)
+
+    @shared_operation
+    def update_item(self, product_id, data):
+        item = self.item_payload(data)
+        item.pop("participants", None)
+        self._mutate_item(product_id, lambda current: dict(current, **item))
+
+    @shared_operation
+    def add_participants(self, product_id, quantity):
+        self._mutate_item(product_id, lambda current: dict(
+            current, participants=int(current.get("participants", 0)) + int(quantity)
+        ))
 
     @shared_operation
     def upload_image(self, content, filename):
@@ -171,11 +199,9 @@ class DBhandler:
 
     @shared_operation
     def patch_images(self, product_id, image, images=None):
-        def update(current):
-            if not isinstance(current, dict):
-                raise ValueError("상품이 없습니다.")
-            return dict(current, image=image, images=images or [], img_path=self.image_path(image))
-        self.ref("item").child(product_id).transaction(update)
+        self._mutate_item(product_id, lambda current: dict(
+            current, image=image, images=images or [], img_path=self.image_path(image)
+        ))
 
     @staticmethod
     def validate_username(username):

@@ -28,7 +28,7 @@ app.config.update(MAX_CONTENT_LENGTH=10 * 1024 * 1024, SESSION_COOKIE_HTTPONLY=T
 DB_PATH = INSTANCE / "market.sqlite3"
 UPLOADS = ROOT / "static" / "images" / "uploads"
 UPLOADS.mkdir(parents=True, exist_ok=True)
-LABELS = {"name": "상품명", "seller_id": "판매자 ID", "price": "가격 (원)", "address": "주소", "status": "상품 상태", "email": "이메일", "start_date": "공동구매 시작일", "end_date": "공동구매 종료일", "pickup_datetime": "상품 수령 일시", "target_amount": "목표 금액 (원)", "target_count": "목표 개수", "manufacturer": "제작 업체", "description": "상품 상세 설명", "category": "카테고리", "chat_url": "오픈채팅 링크"}
+LABELS = {"name": "상품명", "seller_id": "판매자 ID", "price": "가격 (원)", "address": "주소", "status": "상품 상태", "email": "이메일", "start_date": "공동구매 시작일", "end_date": "공동구매 종료일", "pickup_datetime": "상품 수령 일시", "target_amount": "목표 금액 (원)", "target_count": "목표 개수", "manufacturer": "제작 업체", "description": "상품 상세 설명", "category": "카테고리", "chat_url": "오픈채팅 링크", "sizes": "사이즈", "colors": "색상", "custom_option_enabled": "추가 옵션 여부", "custom_option_name": "커스텀 옵션명", "custom_options": "커스텀 옵션"}
 STATUS_LABELS = {"new": "새 상품", "lnew": "새것에 가까움", "used": "중고"}
 WEEKDAYS = "월화수목금토일"
 CATEGORIES = ["생활 · 패션", "식품", "기타"]

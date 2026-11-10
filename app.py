@@ -615,12 +615,12 @@ def login():
             if not next_url.startswith("/") or next_url.startswith(("//", "/\\")):
                 next_url = url_for("account")
             return redirect(next_url)
-            return page(
-                "login.html",
-                "로그인",
-                "login",
-                login_error="ID 또는 비밀번호를 확인해 주세요."
-            )
+        return page(
+            "login.html",
+            "로그인",
+            "login",
+            login_error="ID 또는 비밀번호를 확인해 주세요."
+        )
     return page("login.html", "로그인", "login")
 
 @app.route("/logout", methods=["POST"])

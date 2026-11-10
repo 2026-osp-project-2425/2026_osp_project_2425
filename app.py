@@ -621,8 +621,7 @@ def login():
                 "login",
                 login_error="ID 또는 비밀번호를 확인해 주세요."
             )
-
-        return page("login.html", "로그인", "login")
+    return page("login.html", "로그인", "login")
 
 @app.route("/logout", methods=["POST"])
 def logout():

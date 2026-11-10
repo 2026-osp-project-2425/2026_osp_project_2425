@@ -390,7 +390,6 @@ def product_detail_context(product):
         remaining=state["remaining"],
     )
 
-@app.route("/product_detail")
 @app.route("/products/<int:id>")
 def product_detail(id):
     product = product_by_id(id)
@@ -622,12 +621,10 @@ def login():
             if not next_url.startswith("/") or next_url.startswith(("//", "/\\")):
                 next_url = url_for("account")
             return redirect(next_url)
-        return page(
-            "login.html",
-            "로그인",
-            "login",
-            login_error="ID 또는 비밀번호를 확인해 주세요."
-        )
+        
+        flash("ID 또는 비밀번호를 확인해 주세요.", "login_error")
+        return page("login.html", "로그인", "login")
+    
     return page("login.html", "로그인", "login")
 
 @app.route("/logout", methods=["POST"])

@@ -11,7 +11,9 @@
     {% if user %}<form action="{{ url_for('logout') }}" method="post"><button class="btn btn-white full login-alt" type="submit">로그아웃</button></form>{% else %}<a class="btn btn-white login-alt" href="{{ url_for('signup') }}">아직 계정이 없나요? 회원가입</a>{% endif %}
 </div>
 
-{% if login_error %}
+{% set login_errors = get_flashed_messages(category_filter=["login_error"]) %}
+{% if login_errors %}
+{% set login_error = login_errors[0] %}
 <style>
     #login-error-modal {
         position: fixed;

@@ -391,10 +391,17 @@ def product_detail_context(product):
     )
 
 @app.route("/product_detail")
-def product_detail():
-    product = product_by_id(request.args.get("id", 1, type=int))
-    return page("product_detail.html", "상품 상세", "list", product=product, **product_detail_context(product))
+@app.route("/products/<int:id>")
+def product_detail(id):
+    product = product_by_id(id)
 
+    return page(
+        "product_detail.html",
+        "상품 상세",
+        "list",
+        product=product,
+        **product_detail_context(product)
+    )
 @app.route("/review")
 def view_review():
     reviews = records("reviews")

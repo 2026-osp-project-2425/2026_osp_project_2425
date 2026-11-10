@@ -7,7 +7,7 @@
             <div class="detail-gallery">
                 <div class="photo-main">
                     {% if photos %}
-                    <img src="{{ url_for('static', filename=photos[0]) }}" alt="{{ product.name }} 대표 사진">
+                    <img src="{{ image_url(photos[0]) }}" alt="{{ product.name }} 대표 사진">
                     {% else %}
                     <div class="default-img"></div>
                     {% endif %}
@@ -15,7 +15,7 @@
                 {% if photos|length > 1 %}
                 <div class="photo-thumbs">
                     {% for img in photos %}
-                    <div class="photo-thumb {{ 'on' if loop.first else '' }}"><img src="{{ url_for('static', filename=img) }}" alt=""></div>
+                    <div class="photo-thumb {{ 'on' if loop.first else '' }}"><img src="{{ image_url(img) }}" alt=""></div>
                     {% endfor %}
                 </div>
                 {% endif %}

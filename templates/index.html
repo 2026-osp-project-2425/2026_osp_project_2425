@@ -17,12 +17,12 @@
 
 {% macro photo(src="", shade="light", label="상품 사진") -%}
 <div class="photo-slot {{ shade }}" {% if not src %}role="img" aria-label="{{ label }} 자리"{% endif %}>
-{% if src %}<img src="{{ url_for('static', filename=src) }}" alt="{{ label }}">{% else %}<span class="sr-only">{{ label }} 자리</span>{% endif %}
+{% if src %}<img src="{{ image_url(src) }}" alt="{{ label }}">{% else %}<span class="sr-only">{{ label }} 자리</span>{% endif %}
 </div>
 {%- endmacro %}
 
 {% macro thumb(src, text="사진") -%}
-<div class="thumb">{% if src %}<img src="{{ url_for('static', filename=src) }}" alt="">{% else %}{{ text }}{% endif %}</div>
+<div class="thumb">{% if src %}<img src="{{ image_url(src) }}" alt="">{% else %}{{ text }}{% endif %}</div>
 {%- endmacro %}
 
 {% macro dday(left, short=false) -%}
@@ -65,7 +65,7 @@
 {% macro open_card(p) -%}
 {% set f = p|funding %}
 <article class="product-card white-card">
-    <a class="product-photo" href="{{ url_for('product_detail', id=p.id) }}" aria-label="{{ p.name }} 상세 보기">{% if p.image %}<img src="{{ url_for('static', filename=p.image) }}" alt="">{% else %}상품 사진{% endif %}</a>
+    <a class="product-photo" href="{{ url_for('product_detail', id=p.id) }}" aria-label="{{ p.name }} 상세 보기">{% if p.image %}<img src="{{ image_url(p.image) }}" alt="">{% else %}상품 사진{% endif %}</a>
     <div class="product-tags">{{ dday(f.left, true) }}<span class="chip">{{ p.category or '생활 · 패션' }}</span></div>
     <p class="eyebrow">{{ p.seller_id }} · {{ p.manufacturer or '미정' }}</p>
     <h3><a href="{{ url_for('product_detail', id=p.id) }}">{{ p.name }}</a></h3>
@@ -79,7 +79,7 @@
 {% macro closed_card(p) -%}
 {% set f = p|funding %}{% set stats = review_stats.get(p.id) %}
 <article class="product-card white-card closed-card">
-    <a class="product-photo" href="{{ url_for('product_detail', id=p.id) }}" aria-label="{{ p.name }} 상세 보기">{% if p.image %}<img src="{{ url_for('static', filename=p.image) }}" alt="">{% else %}상품 사진{% endif %}<span class="closed-mark">마감</span></a>
+    <a class="product-photo" href="{{ url_for('product_detail', id=p.id) }}" aria-label="{{ p.name }} 상세 보기">{% if p.image %}<img src="{{ image_url(p.image) }}" alt="">{% else %}상품 사진{% endif %}<span class="closed-mark">마감</span></a>
     <div class="product-tags"><span class="chip">{{ p.category or '생활 · 패션' }}</span></div>
     <p class="eyebrow">{{ p.seller_id }} · {{ p.manufacturer or '미정' }}</p>
     <h3><a href="{{ url_for('product_detail', id=p.id) }}">{{ p.name }}</a></h3>

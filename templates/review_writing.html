@@ -15,7 +15,7 @@
     <section class="green-panel writing-product">
         <p class="writing-label">리뷰 작성 중인 상품</p>
         <div class="writing-row">
-            <div class="writing-photo">{% if product.image %}<img src="{{ url_for('static', filename=product.image) }}" alt="">{% else %}사진{% endif %}</div>
+            <div class="writing-photo">{% if product.image %}<img src="{{ image_url(product.image) }}" alt="">{% else %}사진{% endif %}</div>
             <div class="writing-info">
                 <p>{{ product.seller_id }} 님의 공동구매로 함께한 상품이에요.</p>
                 <div class="writing-name"><span class="writing-chip">{{ product.category or '생활 · 패션' }}</span><b>{{ product.name }}</b>{% if order and order|option %}<span class="writing-option">{{ order|option }}</span>{% endif %}</div>

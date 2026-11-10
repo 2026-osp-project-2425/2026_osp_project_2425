@@ -13,7 +13,7 @@
 <div class="manage-stack">
     <section class="panel manage-summary">
         <div class="manage-product">
-            <div class="manage-photo">{% if product.image %}<img src="{{ url_for('static', filename=product.image) }}" alt="{{ product.name }} 사진">{% else %}사진{% endif %}</div>
+            <div class="manage-photo">{% if product.image %}<img src="{{ image_url(product.image) }}" alt="{{ product.name }} 사진">{% else %}사진{% endif %}</div>
             <div class="manage-info">
                 <span>{% if not f.closed %}<span class="status-chip active">진행 중</span>{% elif f.cancelled %}<span class="status-chip off">목표 미달 · 취소</span>{% elif f.received %}<span class="status-chip off">종료</span>{% else %}<span class="status-chip done">모집 완료</span>{% endif %}</span>
                 <b class="manage-name">{{ product.name }}</b>

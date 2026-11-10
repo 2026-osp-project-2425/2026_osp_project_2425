@@ -12,7 +12,7 @@
     {% if photos %}
     <div class="review-photos">
         {% for img in photos %}
-        <div class="review-photo"><img src="{{ url_for('static', filename=img) }}" alt="리뷰 사진"></div>
+        <div class="review-photo"><img src="{{ image_url(img) }}" alt="리뷰 사진"></div>
         {% endfor %}
     </div>
     {% endif %}

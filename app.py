@@ -11,9 +11,9 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from uuid import uuid4
 
-from flask import Flask, Response, abort, flash, redirect, render_template, request, session, url_for
+from flask import Flask, Response, abort, flash, g, has_request_context, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
-from database import DBhandler, DuplicateIDError
+from database import DBhandler, DuplicateIDError, SharedStoreError, MAX_IMAGE_BYTES
 
 ROOT = Path(__file__).resolve().parent
 DB = DBhandler()
@@ -67,39 +67,60 @@ def init_db():
         if "nickname" not in {row["name"] for row in db.execute("PRAGMA table_info(users)")}:
             db.execute("ALTER TABLE users ADD COLUMN nickname TEXT NOT NULL DEFAULT ''")
             db.execute("UPDATE users SET nickname=name WHERE nickname=''")
-        if db.execute("SELECT count(*) FROM products").fetchone()[0] == 0:
-            samples = [
-                dict(name="2026 배꽃 나비 학잠", seller_id="seahna", price="36000", address="이화여자대학교 학문관 앞", status="new", email="seller@example.com", start_date="2026-10-01", end_date="2026-10-30", pickup_datetime="2026-10-15T14:00", target_amount="100000", target_count="40", manufacturer="웨체비", description="이화인들과 함께하는 학잠 공동구매입니다. 옵션을 선택하고 참여해 주세요.", category="생활 · 패션", participants=32, image=""),
-                dict(name="웨체비 주경바막", seller_id="seahna", price="30000", address="이화여자대학교 학문관 403호 앞", status="new", email="seller@example.com", start_date="2026-10-01", end_date="2026-10-30", pickup_datetime="2026-10-15T14:00", target_amount="100000", target_count="40", manufacturer="웨체비", description="겨울 통학에 활용할 수 있는 바람막이 공동구매입니다.", category="생활 · 패션", participants=32, image=""),
-            ]
-            for item in samples:
-                db.execute("INSERT INTO products(data) VALUES(?)", (json.dumps(item, ensure_ascii=False),))
-        if db.execute("SELECT count(*) FROM reviews").fetchone()[0] == 0:
-            for title, author in [("주경바막 최고", "doeun_24"), ("따뜻하고 편해요", "ewha_25")]:
-                data = dict(product_id=2, title=title, author=author, rating=5, description="주경바막 완전 겨울통학 필수템! 따뜻하고 자수도 예뻐요.", date="2026.10.09", image="", size="M", color="블랙")
-                db.execute("INSERT INTO reviews(data) VALUES(?)", (json.dumps(data, ensure_ascii=False),))
+        # No machine-specific sample products are inserted. Firebase is canonical.
 
 init_db()
 
+def shared_products():
+    if has_request_context():
+        if "shared_products" not in g:
+            g.shared_products = DB.get_items()
+        return g.shared_products
+    return DB.get_items()
+
+def canonical_product_id(value):
+    value = str(value or "")
+    products = shared_products()
+    if any(p["id"] == value for p in products):
+        return value
+    # Only translate legacy local order/review references by exact product name.
+    # Never use a remote local_id: those values can collide between computers.
+    if value.isdigit():
+        with connect() as db:
+            row = db.execute("SELECT data FROM products WHERE id=?", (int(value),)).fetchone()
+        if row:
+            name = json.loads(row["data"]).get("name")
+            matches = [p["id"] for p in products if p["name"] == name]
+            if len(matches) == 1:
+                return matches[0]
+    return None
+
 def records(table):
+    if table == "products":
+        return shared_products()
+    if table != "reviews":
+        raise ValueError("지원하지 않는 테이블입니다.")
     with connect() as db:
-        rows = db.execute(f"SELECT id, data FROM {table} ORDER BY id DESC").fetchall()
-    return [dict(json.loads(row["data"]), id=row["id"]) for row in rows]
+        rows = db.execute("SELECT id, data FROM reviews ORDER BY id DESC").fetchall()
+    result = []
+    for row in rows:
+        review = dict(json.loads(row["data"]), id=row["id"])
+        shared_id = canonical_product_id(review.get("product_id"))
+        if shared_id:
+            result.append(dict(review, product_id=shared_id))
+    return result
 
 def product_by_id(product_id):
-    for item in records("products"):
-        if item["id"] == product_id:
-            return item
-    abort(404)
+    shared_id = canonical_product_id(product_id)
+    product = next((p for p in shared_products() if p["id"] == shared_id), None)
+    if product is None:
+        abort(404)
+    return product
 
 def save_product(product):
-    data = {key: value for key, value in product.items() if key != "id"}
-    with connect() as db:
-        previous = db.execute("SELECT data FROM products WHERE id=?", (product["id"],)).fetchone()
-        previous_name = json.loads(previous["data"])["name"]
-        db.execute("UPDATE products SET data=? WHERE id=?", (json.dumps(data, ensure_ascii=False), product["id"]))
-        # 상품명 아래 Firebase 데이터도 함께 수정합니다.
-        DB.update_item(previous_name, dict(data, local_id=product["id"]))
+    DB.update_item(product["id"], product)
+    if has_request_context():
+        g.pop("shared_products", None)
 
 def owned_product(product_id):
     product = product_by_id(product_id)
@@ -110,7 +131,10 @@ def owned_product(product_id):
 def order_rows(where, params):
     with connect() as db:
         rows = db.execute(f"SELECT orders.*, users.name FROM orders LEFT JOIN users ON users.username = orders.username WHERE {where} ORDER BY orders.id DESC", params).fetchall()
-    return [dict(row) for row in rows]
+    orders = [dict(row) for row in rows]
+    for order in orders:
+        order["product_id"] = canonical_product_id(order["product_id"]) or str(order["product_id"])
+    return orders
 
 def my_order(order_id):
     if not session.get("user"):
@@ -137,16 +161,31 @@ def image_upload(field="file_input", required=False):
         if required:
             raise ValueError("상품 사진을 선택해 주세요.")
         return "", ""
-    extension = Path(image.filename).suffix.lower()
-    if extension not in {".png", ".jpg", ".jpeg", ".gif", ".webp"}:
-        raise ValueError("PNG, JPG, GIF, WEBP 사진 파일을 선택해 주세요.")
-    name = uuid4().hex + extension
-    image.save(UPLOADS / name)
-    return "images/uploads/" + name, image.filename
+    content = image.read(MAX_IMAGE_BYTES + 1)
+    return DB.upload_image(content, image.filename), image.filename
+
+def image_url(image):
+    if not image:
+        return ""
+    if image.startswith("shared/"):
+        return url_for("shared_image", image_id=image.split("/", 1)[1])
+    return url_for("static", filename=image)
+
+@app.route("/media/<image_id>")
+def shared_image(image_id):
+    image = DB.get_image(image_id)
+    if image is None:
+        abort(404)
+    content, content_type = image
+    response = Response(content, mimetype=content_type)
+    response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.set_etag(image_id)
+    return response.make_conditional(request)
 
 @app.context_processor
 def shared_context():
-    return dict(user=session.get("user"), cart_count=sum(int(x["quantity"]) for x in session.get("cart", [])), labels=LABELS, status_labels=STATUS_LABELS, categories=CATEGORIES, option_category=OPTION_CATEGORY, rating_labels=RATING_LABELS)
+    return dict(image_url=image_url, user=session.get("user"), cart_count=sum(int(x["quantity"]) for x in session.get("cart", [])), labels=LABELS, status_labels=STATUS_LABELS, categories=CATEGORIES, option_category=OPTION_CATEGORY, rating_labels=RATING_LABELS)
 
 @app.template_filter("won")
 def won(value):
@@ -328,30 +367,24 @@ def validate_product(data):
 
 @app.route("/submit_item_post", methods=["POST"])
 def reg_item_submit_post():
+    if not session.get("user"):
+        return redirect(url_for("login", next=url_for("reg_item")))
     data = request.form.to_dict()
-    if session.get("user"):
-        data["seller_id"] = session["user"]["username"]
-    image = ""
+    data["seller_id"] = session["user"]["username"]
     try:
         validate_product(data)
         image, filename = image_upload(required=True)
         item = dict(data, image=image, participants=0)
-        with connect() as db:
-            product_id = db.execute("INSERT INTO products(data) VALUES(?)", (json.dumps(item, ensure_ascii=False),)).lastrowid
-            # Practice 1: POST 요청으로 받은 모든 입력값과 사진 경로를 저장합니다.
-            DB.insert_item(dict(item, local_id=product_id), img_path=url_for("static", filename=image))
+        product_id = DB.insert_item(item, img_path=image_url(image))
+        g.pop("shared_products", None)
     except ValueError as error:
-        if image:
-            (ROOT / "static" / image).unlink(missing_ok=True)
         return page("error.html", "입력 확인", "registration", message=str(error)), 400
-    except Exception:
-        if image:
-            (ROOT / "static" / image).unlink(missing_ok=True)
+    except SharedStoreError:
         app.logger.exception("Firebase product save failed")
         return page("error.html", "저장 실패", "registration", message="Firebase에 상품을 저장하지 못했습니다. 연결을 확인하고 다시 시도해 주세요."), 503
-    return page("result.html", "상품 등록 결과", "registration", data=data, original_filename=filename, img_path=url_for("static", filename=image), product_id=product_id)
+    return page("result.html", "상품 등록 결과", "registration", data=data, original_filename=filename, img_path=image_url(image), product_id=product_id)
 
-@app.route("/products/<int:product_id>/edit", methods=["GET", "POST"])
+@app.route("/products/<product_id>/edit", methods=["GET", "POST"])
 def edit_item(product_id):
     product = owned_product(product_id)
     if request.method == "POST":
@@ -365,6 +398,7 @@ def edit_item(product_id):
         product.update(data)
         if image:
             product["image"] = image
+            product["images"] = []
         try:
             save_product(product)
         except ValueError as error:
@@ -390,7 +424,7 @@ def product_detail_context(product):
         remaining=state["remaining"],
     )
 
-@app.route("/products/<int:id>")
+@app.route("/products/<id>")
 def product_detail(id):
     product = product_by_id(id)
 
@@ -404,9 +438,10 @@ def product_detail(id):
 @app.route("/review")
 def view_review():
     reviews = records("reviews")
-    product_id = request.args.get("product_id", type=int)
+    product_id = request.args.get("product_id")
     product = product_by_id(product_id) if product_id else None
     if product:
+        product_id = product["id"]
         reviews = [r for r in reviews if r["product_id"] == product_id]
     review_count = len(reviews)
     average = sum(r["rating"] for r in reviews) / review_count if reviews else 0
@@ -437,8 +472,11 @@ def latest_order(product_id):
 @app.route("/reg_reviews", methods=["GET", "POST"])
 def reg_review():
     products = records("products")
-    product_id = request.values.get("product_id", 2, type=int)
+    if not products:
+        return page("error.html", "상품 등록 필요", message="리뷰를 작성할 상품을 먼저 등록해 주세요."), 400
+    product_id = request.values.get("product_id") or products[0]["id"]
     product = product_by_id(product_id)
+    product_id = product["id"]
     order = latest_order(product_id)
     if request.method == "POST":
         title = request.form.get("title", "").strip()
@@ -469,8 +507,9 @@ def cart():
 
 @app.route("/cart/add", methods=["POST"])
 def cart_add():
-    product_id = request.form.get("product_id", type=int)
+    product_id = request.form.get("product_id")
     product = product_by_id(product_id)
+    product_id = product["id"]
     if funding(product)["closed"]:
         flash("마감된 공동구매는 장바구니에 담을 수 없어요.", "error")
         return redirect(url_for("product_detail", id=product_id))
@@ -501,7 +540,7 @@ def cart_remove():
 
 @app.route("/participate", methods=["POST"])
 def participate():
-    single_id = request.form.get("product_id", type=int)
+    single_id = request.form.get("product_id")
     back = url_for("product_detail", id=single_id) if single_id else url_for("cart")
     if not session.get("user"):
         flash("로그인 후 공동구매에 참여할 수 있어요.", "error")
@@ -526,8 +565,8 @@ def participate():
     for entry, p in zip(entries, products):
         with connect() as db:
             order_id = db.execute("INSERT INTO orders(product_id, username, size, color, quantity, created_at) VALUES(?,?,?,?,?,?)", (p["id"], session["user"]["username"], entry["size"], entry["color"], entry["quantity"], datetime.now().strftime("%Y.%m.%d"))).lastrowid
-        p["participants"] = p.get("participants", 0) + entry["quantity"]
-        save_product(p)
+        DB.add_participants(p["id"], entry["quantity"])
+        g.pop("shared_products", None)
     if single_id:
         return redirect(url_for("order_done", order_id=order_id))
     session["cart"] = []
@@ -578,11 +617,7 @@ def signup():
                           student_id=values["student_id"] or None,
                           joined_at=datetime.now().strftime("%Y.%m.%d"))
             try:
-                with connect() as db:
-                    db.execute("INSERT INTO users(username,email,password_hash,name,student_id,phone,joined_at,nickname) VALUES(?,?,?,?,?,?,?,?)",
-                               tuple(record[key] for key in ("username", "email", "password_hash", "name", "student_id", "phone", "joined_at", "nickname")))
-                    # Practice 2: /user/ID 아래 저장. Firebase에서도 중복을 막습니다.
-                    DB.insert_user(record)
+                DB.insert_user(record)
             except (sqlite3.IntegrityError, DuplicateIDError):
                 flash("이미 등록된 ID, 이메일 또는 학번입니다.", "error")
             except Exception:
@@ -610,9 +645,23 @@ def check_id():
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        with connect() as db:
-            user = db.execute("SELECT * FROM users WHERE username=?", (request.form.get("username", ""),)).fetchone()
-        if user and check_password_hash(user["password_hash"], request.form.get("password", "")):
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "")
+        user = DB.get_user(username)
+        # A verified legacy local-only account is published once, so it can
+        # subsequently log in on other computers too. Existing remote users win.
+        if user is None:
+            with connect() as db:
+                legacy = db.execute("SELECT * FROM users WHERE username=?", (username,)).fetchone()
+            if legacy and check_password_hash(legacy["password_hash"], password):
+                record = dict(legacy)
+                record["nickname"] = record.get("nickname") or record["name"]
+                try:
+                    DB.insert_user(record)
+                except DuplicateIDError:
+                    pass
+                user = DB.get_user(username)
+        if user and check_password_hash(user.get("password_hash", ""), password):
             session["user"] = {key: user[key] for key in ("username", "name", "nickname", "email", "student_id")}
             session["id"] = user["username"]
             flash("로그인되었습니다.", "success")
@@ -635,8 +684,7 @@ def logout():
 def current_profile():
     if not session.get("user"):
         return None
-    with connect() as db:
-        return db.execute("SELECT * FROM users WHERE username=?", (session["user"]["username"],)).fetchone()
+    return DB.get_user(session["user"]["username"])
 
 @app.route("/account")
 def account():
@@ -669,9 +717,7 @@ def account_edit():
             flash("학번은 숫자로 입력해 주세요.", "error")
         else:
             try:
-                with connect() as db:
-                    db.execute("UPDATE users SET name=?, email=?, student_id=?, phone=?, nickname=? WHERE id=?", (values["name"], values["email"], values["student_id"] or None, values["phone"], values["nickname"], profile["id"]))
-                    DB.update_user(profile["username"], dict(values, student_id=values["student_id"] or None))
+                DB.update_user(profile["username"], dict(values, student_id=values["student_id"] or None))
             except sqlite3.IntegrityError:
                 flash("이미 등록된 이메일 또는 학번입니다.", "error")
             except Exception:
@@ -683,7 +729,7 @@ def account_edit():
                 return redirect(url_for("account"))
     return page("account_edit.html", "정보 수정", "account", profile=profile)
 
-@app.route("/manage/<int:product_id>")
+@app.route("/manage/<product_id>")
 def manage(product_id):
     product = owned_product(product_id)
     tab = request.args.get("tab") if request.args.get("tab") in (*MANAGE_TABS, "notice") else "participants"
@@ -696,7 +742,7 @@ def manage(product_id):
     notices = sorted(product.get("notices", []), key=lambda n: (n["important"], n["id"]), reverse=True)
     return page("manage.html", "공동구매 관리", "account", product=product, state=funding(product), tab=tab, tabs=MANAGE_TABS, orders=orders, listed=listed[(number-1)*5:number*5], listed_count=len(listed), query=query, current_page=number, pages=pages, options=option_summary(orders), quantity=sum(o["quantity"] for o in orders), reviews=reviews, notices=notices, steps=stages(product, ("종료", ""), finished=True), **product_detail_context(product))
 
-@app.route("/manage/<int:product_id>/notices", methods=["POST"])
+@app.route("/manage/<product_id>/notices", methods=["POST"])
 def manage_notices(product_id):
     product = owned_product(product_id)
     notices = product.get("notices", [])
@@ -719,7 +765,7 @@ def spreadsheet_safe(value):
     text = str(value)
     return "'" + text if text[:1] in ("=", "+", "-", "@") else text
 
-@app.route("/manage/<int:product_id>/orders.csv")
+@app.route("/manage/<product_id>/orders.csv")
 def manage_csv(product_id):
     product = owned_product(product_id)
     output = io.StringIO()
@@ -727,7 +773,12 @@ def manage_csv(product_id):
     writer.writerow(["주문 번호", "이름", "아이디", "색상", "사이즈", "수량", "금액", "주문일"])
     for o in order_rows("orders.product_id=?", (product_id,)):
         writer.writerow([spreadsheet_safe(v) for v in (order_number(o), o["name"] or "", o["username"], o["color"] or "", o["size"] or "", o["quantity"], int(product["price"]) * o["quantity"], o["created_at"])])
-    return Response("﻿" + output.getvalue(), mimetype="text/csv", headers={"Content-Disposition": f"attachment; filename=orders-{product_id}.csv"})
+    return Response("﻿" + output.getvalue(), mimetype="text/csv", headers={"Content-Disposition": "attachment; filename=orders.csv"})
+
+@app.errorhandler(SharedStoreError)
+def shared_store_unavailable(error):
+    app.logger.error("Shared Firebase unavailable: %s", error)
+    return page("error.html", "연결 확인", message=str(error)), 503
 
 @app.errorhandler(403)
 def forbidden(error):

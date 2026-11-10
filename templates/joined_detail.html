@@ -8,7 +8,7 @@
 {% set f = state %}
 <div class="joined-stack">
     <section class="panel joined-summary">
-        <div class="joined-photo">{% if product.image %}<img src="{{ url_for('static', filename=product.image) }}" alt="{{ product.name }} 사진">{% else %}상품 사진{% endif %}</div>
+        <div class="joined-photo">{% if product.image %}<img src="{{ image_url(product.image) }}" alt="{{ product.name }} 사진">{% else %}상품 사진{% endif %}</div>
         <div class="joined-info">
             <span class="joined-tags">{% if not f.closed %}<span class="status-chip active">진행 중</span>{% if f.left is not none %}<span class="status-chip urgent">{{ 'D-DAY' if f.left == 0 else 'D-' ~ f.left }}</span>{% endif %}
                 {%- elif f.cancelled %}<span class="status-chip off">목표 미달 · 공동구매 취소</span>

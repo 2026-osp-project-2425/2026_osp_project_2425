@@ -85,7 +85,7 @@
         <div class="section-head"><span class="section-num" aria-hidden="true"></span><h2>사진 · 상세 설명</h2></div>
         <div class="upload-control" data-upload>
             <div class="upload-row">
-                {% if p.image %}<div class="upload-preview"><img src="{{ url_for('static', filename=p.image) }}" alt="지금 등록된 상품 사진"></div>{% endif %}
+                {% if p.image %}<div class="upload-preview"><img src="{{ image_url(p.image) }}" alt="지금 등록된 상품 사진"></div>{% endif %}
                 <div class="upload-preview {{ 'only-selected' if p.image }}"><img data-preview alt="선택한 상품 사진" hidden><span>사진</span></div>
                 <label class="upload-add" for="file_input">{{ '+ 사진 바꾸기' if p.image else '+ 사진 추가' }}<input id="file_input" name="file_input" type="file" accept="image/png,image/jpeg,image/gif,image/webp" multiple {{ '' if product else 'required' }}></label>
             </div>

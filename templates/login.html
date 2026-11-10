@@ -10,4 +10,16 @@
     </form>
     {% if user %}<form action="{{ url_for('logout') }}" method="post"><button class="btn btn-white full login-alt" type="submit">로그아웃</button></form>{% else %}<a class="btn btn-white login-alt" href="{{ url_for('signup') }}">아직 계정이 없나요? 회원가입</a>{% endif %}
 </div>
-{% endblock %}
+
+{% if login_error %}
+<div id="login-error"
+     data-message="{{ login_error | e }}"
+     hidden></div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const errorElement = document.getElementById("login-error");
+        alert(errorElement.dataset.message);
+    });
+</script>
+{% endif %}

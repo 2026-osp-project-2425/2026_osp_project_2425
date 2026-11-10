@@ -608,20 +608,26 @@ def login():
             user = db.execute("SELECT * FROM users WHERE username=?", (request.form.get("username", ""),)).fetchone()
         if user and check_password_hash(user["password_hash"], request.form.get("password", "")):
             session["user"] = {key: user[key] for key in ("username", "name", "nickname", "email", "student_id")}
+            session["id"] = user["username"]
             flash("로그인되었습니다.", "success")
             # 다른 사이트로 넘어가지 않도록 이 사이트 안의 경로만 따른다.
             next_url = request.form.get("next", "")
             if not next_url.startswith("/") or next_url.startswith(("//", "/\\")):
                 next_url = url_for("account")
             return redirect(next_url)
-        flash("ID 또는 비밀번호를 확인해 주세요.", "error")
-    return page("login.html", "로그인", "login")
+            return page(
+                "login.html",
+                "로그인",
+                "login",
+                login_error="ID 또는 비밀번호를 확인해 주세요."
+            )
+
+        return page("login.html", "로그인", "login")
 
 @app.route("/logout", methods=["POST"])
 def logout():
-    session.pop("user", None)
-    flash("로그아웃되었습니다.", "success")
-    return redirect(url_for("login"))
+    session.clear()
+    return redirect(url_for("hello"))
 
 def current_profile():
     if not session.get("user"):

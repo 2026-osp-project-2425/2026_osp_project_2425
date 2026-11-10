@@ -54,7 +54,7 @@
 {%- endmacro %}
 
 {% macro pagination(endpoint) -%}
-{% if pages > 1 %}<nav class="pagination" aria-label="페이지 선택">
+{% if pages >= 1 %}<nav class="pagination" aria-label="페이지 선택">
 {% set args = dict(q=request.args.get('q',''), sort=request.args.get('sort',''), category=request.args.get('category',''), product_id=request.args.get('product_id',''), status=request.args.get('status','')) %}
 {% if current_page > 1 %}<a class="pill" href="{{ url_for(endpoint, page=current_page-1, **args) }}" aria-label="이전 페이지">‹</a>{% else %}<span class="pill" aria-disabled="true">‹</span>{% endif %}
 {% for number in range(1,pages+1) %}<a href="{{ url_for(endpoint, page=number, **args) }}" class="pill {{ 'on' if number == current_page else '' }}" {% if number == current_page %}aria-current="page"{% endif %}>{{ number }}</a>{% endfor %}

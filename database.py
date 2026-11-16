@@ -102,6 +102,51 @@ class DBhandler:
         return sorted(products, key=lambda item: (item.get("created_at", ""), item["id"]), reverse=True)
 
     @shared_operation
+    def insert_review(self, data):
+        review_id = "r_" + uuid4().hex[:12]
+        self.ref("review").child(review_id).set(
+            dict(data, created_ts=datetime.now(timezone.utc).isoformat())
+        )
+        return review_id
+
+    @shared_operation
+    def get_reviews(self):
+        values = self.ref("review").get() or {}
+        reviews = [
+            dict(value, id=key)
+            for key, value in values.items()
+            if isinstance(value, dict)
+        ]
+        return sorted(
+            reviews,
+            key=lambda r: r.get("created_ts", ""),
+            reverse=True
+        )
+
+    @shared_operation
+    def insert_order(self, data):
+        order_id = "o_" + uuid4().hex[:12]
+        self.ref("order").child(order_id).set(
+            dict(data, created_ts=datetime.now(timezone.utc).isoformat())
+        )
+        return order_id
+
+    @shared_operation
+    def get_orders(self):
+        values = self.ref("order").get() or {}
+        orders = [
+            dict(value, id=key)
+            for key, value in values.items()
+            if isinstance(value, dict)
+        ]
+        return sorted(
+            orders,
+            key=lambda o: o.get("created_ts", ""),
+            reverse=True
+        )
+
+
+    @shared_operation
     def get_item(self, product_id):
         product_id = str(product_id)
         matches = [item for item in self.get_items() if item["id"] == product_id]

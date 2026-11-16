@@ -20,3 +20,6 @@ firebase_patch/
 
 authentication/
 venv/
+
+# macOS system files
+.DS_Store

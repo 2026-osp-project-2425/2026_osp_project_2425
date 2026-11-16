@@ -95,20 +95,14 @@ def canonical_product_id(value):
                 return matches[0]
     return None
 
+
 def records(table):
     if table == "products":
         return shared_products()
-    if table != "reviews":
-        raise ValueError("지원하지 않는 테이블입니다.")
-    with connect() as db:
-        rows = db.execute("SELECT id, data FROM reviews ORDER BY id DESC").fetchall()
-    result = []
-    for row in rows:
-        review = dict(json.loads(row["data"]), id=row["id"])
-        shared_id = canonical_product_id(review.get("product_id"))
-        if shared_id:
-            result.append(dict(review, product_id=shared_id))
-    return result
+    if table == "reviews":
+        return DB.get_reviews()
+    raise ValueError("지원하지 않는 테이블입니다.")
+
 
 def product_by_id(product_id):
     shared_id = canonical_product_id(product_id)
@@ -128,21 +122,36 @@ def owned_product(product_id):
         abort(403)
     return product
 
-def order_rows(where, params):
-    with connect() as db:
-        rows = db.execute(f"SELECT orders.*, users.name FROM orders LEFT JOIN users ON users.username = orders.username WHERE {where} ORDER BY orders.id DESC", params).fetchall()
-    orders = [dict(row) for row in rows]
-    for order in orders:
-        order["product_id"] = canonical_product_id(order["product_id"]) or str(order["product_id"])
+
+def order_rows(product_id=None, username=None):
+    orders = DB.get_orders()
+    if product_id is not None:
+        orders = [o for o in orders if o["product_id"] == product_id]
+    if username is not None:
+        orders = [o for o in orders if o["username"] == username]
     return orders
+
+
 
 def my_order(order_id):
     if not session.get("user"):
         abort(403)
-    rows = order_rows("orders.id=? AND orders.username=?", (order_id, session["user"]["username"]))
-    if not rows:
+
+    order = next(
+        (
+            o for o in order_rows(
+                username=session["user"]["username"]
+            )
+            if o["id"] == order_id
+        ),
+        None
+    )
+
+    if order is None:
         abort(404)
-    return rows[0]
+
+    return order
+
 
 def order_option(order):
     return " / ".join(value for value in (order.get("color"), order.get("size")) if value)
@@ -211,7 +220,7 @@ def kdate(value):
 
 @app.template_filter("order_number")
 def order_number(order):
-    return f"EW-{order['created_at'].replace('.', '')}-{order['id']:04d}"
+    return f"EW-{order['created_at'].replace('.', '')}-{str(order['id'])[-6:].upper()}"
 
 @app.template_filter("option")
 def option_filter(order):
@@ -458,7 +467,7 @@ def view_review():
 
 @app.route("/review_detail")
 def review_detail():
-    review_id = request.args.get("id", 1, type=int)
+    review_id = request.args.get("id", "")
     review = next((r for r in records("reviews") if r["id"] == review_id), None)
     if not review:
         abort(404)
@@ -467,21 +476,65 @@ def review_detail():
 def latest_order(product_id):
     if not session.get("user"):
         return None
-    return next(iter(order_rows("orders.product_id=? AND orders.username=?", (product_id, session["user"]["username"]))), None)
+    return next(
+        iter(order_rows(
+            product_id=product_id,
+            username=session["user"]["username"]
+        )),
+        None
+    )
+
 
 @app.route("/reg_reviews", methods=["GET", "POST"])
 def reg_review():
-    products = records("products")
-    if not products:
-        return page("error.html", "상품 등록 필요", message="리뷰를 작성할 상품을 먼저 등록해 주세요."), 400
-    product_id = request.values.get("product_id") or products[0]["id"]
-    product = product_by_id(product_id)
-    product_id = product["id"]
-    order = latest_order(product_id)
+    if not session.get("user"):
+        flash("로그인 후 리뷰를 작성할 수 있어요.", "error")
+        return redirect(url_for("login", next=request.path))
+
+    username = session["user"]["username"]
+    products = {p["id"]: p for p in records("products")}
+
+    joined_orders = order_rows(username=username)
+    joined_items = [
+        dict(order=o, product=products[o["product_id"]])
+        for o in joined_orders
+        if o["product_id"] in products
+    ]
+
+    if not joined_items:
+        if request.method == "POST":
+            abort(403)
+        return page(
+            "review_writing.html",
+            "리뷰 작성",
+            "writing",
+            joined_items=[],
+            product=None,
+            order=None
+        )
+
+    product_id = request.values.get("product_id")
+    if not product_id:
+        product_id = joined_items[0]["product"]["id"]
+
+    if product_id not in products:
+        abort(404)
+
+    order = next(
+        (o for o in joined_orders if o["product_id"] == product_id),
+        None
+    )
+
+    if order is None:
+        abort(403)
+
+    product = products[product_id]
+
     if request.method == "POST":
         title = request.form.get("title", "").strip()
         description = request.form.get("description", "").strip()
         rating = request.form.get("rating", 5, type=int)
+
         if not title or not description or rating not in range(1, 6):
             flash("제목, 내용, 1~5점 평점을 입력해 주세요.", "error")
         else:
@@ -490,12 +543,30 @@ def reg_review():
             except ValueError as error:
                 flash(str(error), "error")
             else:
-                data = dict(product_id=product_id, title=title, description=description, rating=rating, author=session.get("user", {}).get("username", "User"), date=datetime.now().strftime("%Y.%m.%d"), image=image, size=order["size"] if order else "", color=order["color"] if order else "")
-                with connect() as db:
-                    review_id = db.execute("INSERT INTO reviews(data) VALUES(?)", (json.dumps(data, ensure_ascii=False),)).lastrowid
+                data = dict(
+                    product_id=product_id,
+                    title=title,
+                    description=description,
+                    rating=rating,
+                    author=username,
+                    date=datetime.now().strftime("%Y.%m.%d"),
+                    image=image,
+                    size=order["size"],
+                    color=order["color"]
+                )
+                review_id = DB.insert_review(data)
                 flash("리뷰가 등록되었습니다.", "success")
                 return redirect(url_for("review_detail", id=review_id))
-    return page("review_writing.html", "리뷰 작성", "writing", products=products, product=product, order=order)
+
+    return page(
+        "review_writing.html",
+        "리뷰 작성",
+        "writing",
+        products=list(products.values()),
+        product=product,
+        order=order,
+        joined_items=joined_items
+    )
 
 @app.route("/cart")
 def cart():
@@ -562,24 +633,33 @@ def participate():
     if closed:
         flash(f"마감된 공동구매에는 참여할 수 없어요: {', '.join(closed)}", "error")
         return redirect(back)
+
     for entry, p in zip(entries, products):
-        with connect() as db:
-            order_id = db.execute("INSERT INTO orders(product_id, username, size, color, quantity, created_at) VALUES(?,?,?,?,?,?)", (p["id"], session["user"]["username"], entry["size"], entry["color"], entry["quantity"], datetime.now().strftime("%Y.%m.%d"))).lastrowid
+        order_id = DB.insert_order(dict(
+            product_id=p["id"],
+            username=session["user"]["username"],
+            name=session["user"]["name"],
+            size=entry["size"],
+            color=entry["color"],
+            quantity=entry["quantity"],
+            created_at=datetime.now().strftime("%Y.%m.%d")
+        ))
         DB.add_participants(p["id"], entry["quantity"])
         g.pop("shared_products", None)
+
     if single_id:
         return redirect(url_for("order_done", order_id=order_id))
     session["cart"] = []
     flash(f"{len(entries)}개 상품의 공동구매 참여가 확정됐어요. 실제 결제는 진행되지 않습니다.", "success")
     return redirect(url_for("account"))
 
-@app.route("/order_done/<int:order_id>")
+@app.route("/order_done/<order_id>")
 def order_done(order_id):
     order = my_order(order_id)
     product = product_by_id(order["product_id"])
     return page("order_done.html", "구매 확정 완료", "", order=order, product=product, **product_detail_context(product))
 
-@app.route("/joined/<int:order_id>")
+@app.route("/joined/<order_id>")
 def joined_detail(order_id):
     order = my_order(order_id)
     product = product_by_id(order["product_id"])
@@ -587,7 +667,7 @@ def joined_detail(order_id):
     review = next((r for r in records("reviews") if r["product_id"] == product["id"] and r["author"] == order["username"]), None)
     tab = request.args.get("tab") if request.args.get("tab") in ("people", "contact") else "notice"
     title = "진행 중 상품 상세" if not state["closed"] else "참여 상품 상세"
-    return page("joined_detail.html", title, "account", order=order, product=product, state=state, review=review, tab=tab, steps=stages(product, ("리뷰 작성", "수령 후"), finished=bool(review)), options=option_summary(order_rows("orders.product_id=?", (product["id"],))), **product_detail_context(product))
+    return page("joined_detail.html", title, "account", order=order, product=product, state=state, review=review, tab=tab, steps=stages(product, ("리뷰 작성", "수령 후"), finished=bool(review)), options=option_summary(order_rows(product_id=product["id"])), **product_detail_context(product))
 
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
@@ -695,7 +775,7 @@ def account():
     tab = "hosted" if request.args.get("tab") == "hosted" else "joined"
     if tab == "joined":
         my_reviews = {r["product_id"]: r for r in reversed(records("reviews")) if r["author"] == profile["username"]}
-        items = [dict(order, product=products[order["product_id"]], state=funding(products[order["product_id"]]), review=my_reviews.get(order["product_id"])) for order in order_rows("orders.username=?", (profile["username"],)) if order["product_id"] in products]
+        items = [dict(order, product=products[order["product_id"]], state=funding(products[order["product_id"]]), review=my_reviews.get(order["product_id"])) for order in order_rows(username=profile["username"]) if order["product_id"] in products]
     else:
         stats = review_stats(records("reviews"))
         items = [dict(product=p, state=funding(p), reviews=stats.get(p["id"], {}).get("count", 0)) for p in products.values() if p["seller_id"] == profile["username"]]
@@ -733,7 +813,7 @@ def account_edit():
 def manage(product_id):
     product = owned_product(product_id)
     tab = request.args.get("tab") if request.args.get("tab") in (*MANAGE_TABS, "notice") else "participants"
-    orders = order_rows("orders.product_id=?", (product_id,))
+    orders = order_rows(product_id=product_id)
     query = request.args.get("q", "").strip()
     listed = [o for o in orders if query.casefold() in f"{o['name'] or ''} {o['username']}".casefold()] if query else orders
     pages = max(1, math.ceil(len(listed) / 5))
@@ -746,18 +826,52 @@ def manage(product_id):
 def manage_notices(product_id):
     product = owned_product(product_id)
     notices = product.get("notices", [])
+
     delete_id = request.form.get("delete", type=int)
+    edit_id = request.form.get("edit_id", type=int)
     title = request.form.get("title", "").strip()
-    if delete_id:
+    content = request.form.get("content", "").strip()
+    important = bool(request.form.get("important"))
+
+    if delete_id is not None:
         notices = [n for n in notices if n["id"] != delete_id]
         flash("공지사항을 삭제했습니다.", "success")
+
     elif not title or len(title) > 80:
         flash("공지 제목을 80자 이내로 입력해 주세요.", "error")
+
+    elif len(content) > 5000:
+        flash("공지 본문은 5000자 이내로 입력해 주세요.", "error")
+
+    elif edit_id is not None:
+        notice = next(
+            (n for n in notices if n["id"] == edit_id),
+            None
+        )
+
+        if notice is None:
+            abort(404)
+
+        notice["title"] = title
+        notice["content"] = content
+        notice["important"] = important
+
+        flash("공지사항을 수정했습니다.", "success")
+
     else:
-        notices.append(dict(id=max((n["id"] for n in notices), default=0) + 1, title=title, important=bool(request.form.get("important")), date=datetime.now().strftime("%Y.%m.%d %H:%M")))
+        notices.append(dict(
+            id=max((n["id"] for n in notices), default=0) + 1,
+            title=title,
+            content=content,
+            important=important,
+            date=datetime.now().strftime("%Y.%m.%d %H:%M")
+        ))
+
         flash("공지사항을 등록했습니다. 참여자 상세 화면에 바로 보여요.", "success")
+
     product["notices"] = notices
     save_product(product)
+
     return redirect(url_for("manage", product_id=product_id, tab="notice"))
 
 def spreadsheet_safe(value):
@@ -771,7 +885,7 @@ def manage_csv(product_id):
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow(["주문 번호", "이름", "아이디", "색상", "사이즈", "수량", "금액", "주문일"])
-    for o in order_rows("orders.product_id=?", (product_id,)):
+    for o in order_rows(product_id=product_id):
         writer.writerow([spreadsheet_safe(v) for v in (order_number(o), o["name"] or "", o["username"], o["color"] or "", o["size"] or "", o["quantity"], int(product["price"]) * o["quantity"], o["created_at"])])
     return Response("﻿" + output.getvalue(), mimetype="text/csv", headers={"Content-Disposition": "attachment; filename=orders.csv"})
 

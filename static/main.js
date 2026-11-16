@@ -531,13 +531,49 @@
     }
 
     // 공지사항 수정 버튼 클릭 처리
-    document.querySelectorAll('[data-notice-edit]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const titleInput = document.getElementById('notice-title');
-            const contentInput = document.getElementById('notice-body');
-            if (titleInput) titleInput.value = btn.dataset.title || '';
-            if (contentInput) contentInput.value = btn.dataset.content || '';
-            titleInput?.focus();
-            titleInput?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const noticeForm = document.querySelector('.notice-form');
+
+    if (noticeForm) {
+        const titleInput = document.getElementById('notice-title');
+        const contentInput = document.getElementById('notice-body');
+        const editIdInput = document.getElementById('notice-edit-id');
+        const importantInput = noticeForm.querySelector('input[name="important"]');
+        const submitButton = noticeForm.querySelector('button[type="submit"]');
+
+        const cancelButton = document.createElement('button');
+        cancelButton.type = 'button';
+        cancelButton.className = 'line-btn';
+        cancelButton.textContent = '수정 취소';
+        cancelButton.hidden = true;
+        submitButton.after(cancelButton);
+
+        function resetNoticeForm() {
+            noticeForm.reset();
+            editIdInput.value = '';
+            editIdInput.disabled = true;
+            submitButton.textContent = '공지 등록';
+            cancelButton.hidden = true;
+        }
+
+        document.querySelectorAll('[data-notice-edit]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                titleInput.value = btn.dataset.title || '';
+                contentInput.value = btn.dataset.content || '';
+                importantInput.checked = btn.dataset.important === 'true';
+
+                editIdInput.value = btn.dataset.noticeEdit;
+                editIdInput.disabled = false;
+
+                submitButton.textContent = '공지 수정 완료';
+                cancelButton.hidden = false;
+
+                titleInput.focus();
+                titleInput.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center'
+                });
+            });
         });
-    });
+
+        cancelButton.addEventListener('click', resetNoticeForm);
+    }

@@ -1,6 +1,13 @@
 {% extends "index.html" %}
 {% block content %}
 <div class="form-stack">
+    {% if not product %}
+    <section class="white-card empty-state">
+        <p>아직 리뷰를 작성할 수 있는 상품이 없어요.</p>
+        <p class="muted small">공동구매에 참여한 상품만 리뷰를 작성할 수 있어요.</p>
+        <a class="btn" href="{{ url_for('view_list') }}">진행 중인 공동구매 보기</a>
+    </section>
+    {% else %}
     <form class="product-select" method="get">
         <label for="product_id">상품 선택</label>
         <select id="product_id" name="product_id" data-auto-submit>
@@ -50,5 +57,6 @@
         </section>
         <div class="form-submit"><p class="muted small" data-draft-status aria-live="polite"></p><button class="btn btn-white" type="button" data-save-draft>임시 저장하기</button><button class="btn" type="submit">리뷰 등록하기</button></div>
     </form>
+    {% endif %}
 </div>
 {% endblock %}

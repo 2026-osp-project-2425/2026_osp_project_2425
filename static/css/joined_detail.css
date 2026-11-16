@@ -27,12 +27,80 @@
 .joined-status .share-status:empty { display:none; }
 .align-end { align-self:flex-end; }
 .news-panel { gap:4px; }
-.news-row { display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; padding:14px 12px; border-bottom:1px solid var(--line); font-size:15px; }
+
+.news-row {
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:8px 12px;
+    padding:14px 12px;
+    border-bottom:1px solid var(--line);
+    font-size:15px;
+}
+
 .news-row:last-child { border-bottom:0; }
-.news-row.pinned { background:#fbf8f1; border-radius:10px; }
-.news-row b,.news-row>span:not(.status-chip):not(.news-date) { min-width:0; overflow-wrap:anywhere; }
-.news-row a { color:var(--green); font-weight:600; overflow-wrap:anywhere; }
-.news-date { margin-left:auto; color:var(--muted); font-size:13px; white-space:nowrap; }
+
+.news-row.pinned,
+.news-item.pinned {
+    background:#fbf8f1;
+    border-radius:10px;
+}
+
+.news-row b,
+.news-row>span:not(.status-chip):not(.news-date) {
+    min-width:0;
+    overflow-wrap:anywhere;
+}
+
+.news-row a {
+    color:var(--green);
+    font-weight:600;
+    overflow-wrap:anywhere;
+}
+
+.news-date {
+    margin-left:auto;
+    color:var(--muted);
+    font-size:13px;
+    white-space:nowrap;
+}
+
+/* 공지사항 접기·펼치기 */
+.news-item {
+    border-bottom:1px solid var(--line);
+}
+
+.news-item:last-of-type {
+    border-bottom:0;
+}
+
+.news-item summary {
+    cursor:pointer;
+    list-style:none;
+    border-bottom:0;
+}
+
+.news-item summary::-webkit-details-marker {
+    display:none;
+}
+
+.news-item summary::after {
+    content:"▾";
+    color:var(--muted);
+    font-size:14px;
+}
+
+.news-item[open] summary::after {
+    content:"▴";
+}
+
+.news-item .notice-text {
+    padding:0 12px 14px;
+    margin:0;
+    color:var(--body);
+    font-size:14px;
+    overflow-wrap:anywhere;
+}
 .news-lead { padding:16px 12px 8px; color:var(--body); font-size:14px; }
 .news-empty { padding:28px 12px; color:var(--muted); font-size:14px; text-align:center; }
 @media(max-width:760px) {

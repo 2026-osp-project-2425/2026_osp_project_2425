@@ -69,8 +69,37 @@
         </nav>
         {% if tab == 'notice' %}
             {% for n in product.notices|default([])|sort(attribute='id', reverse=true)|sort(attribute='important', reverse=true) %}
-            <div class="news-row {{ 'pinned' if n.important else '' }}">{% if n.important %}<span aria-hidden="true">📌</span><span class="status-chip active">중요</span><b>{{ n.title }}</b>{% else %}<span class="status-chip off">안내</span><span>{{ n.title }}</span>{% endif %}<span class="news-date">{{ n.date }}</span></div>
-            {% else %}<p class="news-empty">아직 등록된 공지사항이 없어요. 진행자가 공지를 올리면 여기에 보여요.</p>{% endfor %}
+                {% if n.content %}
+            <details class="news-item {{ 'pinned' if n.important else '' }}">
+                <summary class="news-row">
+                    {% if n.important %}
+                    <span aria-hidden="true">📌</span>
+                    <span class="status-chip active">중요</span>
+                    {% else %}
+                    <span class="status-chip off">안내</span>
+                    {% endif %}
+                    <div class="notice-content">
+                        <b>{{ n.title }}</b>
+                    </div>
+                    <span class="news-date">{{ n.date }}</span>
+                </summary>
+                <p class="notice-text" style="white-space: pre-wrap;">{{ n.content }}</p>
+            </details>
+            {% else %}
+            <div class="news-row {{ 'pinned' if n.important else '' }}">
+                {% if n.important %}
+                <span aria-hidden="true">📌</span>
+                <span class="status-chip active">중요</span>
+                {% else %}
+                <span class="status-chip off">안내</span>
+                {% endif %}
+                <b>{{ n.title }}</b>
+                <span class="news-date">{{ n.date }}</span>
+            </div>
+            {% endif %}
+            {% else %}
+            <p class="news-empty">아직 등록된 공지사항이 없어요. 진행자가 공지를 올리면 여기에 보여요.</p>
+            {% endfor %}
         {% elif tab == 'people' %}
             <p class="news-lead">지금까지 <b>{{ f.participants }}명</b>이 참여했어요{% if f.target %} (목표 {{ f.target }}명){% endif %}. 다른 참여자의 이름은 공개되지 않아요.</p>
             {% for o in options %}<div class="news-row"><span>{{ o.option }}</span><span class="news-date">{{ o.quantity }}개</span></div>

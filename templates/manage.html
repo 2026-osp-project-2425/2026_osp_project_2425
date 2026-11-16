@@ -88,9 +88,10 @@
         {% elif tab == 'notice' %}
             <h2 class="panel-title">공지사항 관리</h2>
             <form class="notice-form" method="post" action="{{ url_for('manage_notices', product_id=product.id) }}">
+                <input type="hidden" id="notice-edit-id" name="edit_id" disabled>
                 <div class="notice-inputs">
                     <input id="notice-title" name="title" maxlength="80" placeholder="공지 제목 (예: 최종 시안 및 수령 안내)" required>
-                    <textarea id="notice-body" name="content" placeholder="공지 본문 내용을 입력해 주세요." rows="3"></textarea>
+                    <textarea id="notice-body" name="content" placeholder="공지 본문 내용을 입력해 주세요." rows="3" maxlength="5000"></textarea>
                 </div>
                 <div class="notice-form-foot">
                     <label class="notice-important"><input type="checkbox" name="important" value="1"> 중요 공지</label>
@@ -101,12 +102,18 @@
             <div class="notice-row">
                 {% if n.important %}<span class="status-chip active">중요</span>{% else %}<span class="status-chip off">안내</span>{% endif %}
                 <div class="notice-content">
+                    {% if n.content %}
+                    <details>
+                        <summary><b>{{ n.title }}</b></summary>
+                        <p class="notice-text" style="white-space: pre-wrap;">{{ n.content }}</p>
+                    </details>
+                    {% else %}
                     <b>{{ n.title }}</b>
-                    {% if n.content %}<p class="notice-text">{{ n.content }}</p>{% endif %}
+                    {% endif %}
                     <span class="muted small">{{ n.date }}</span>
                 </div>
                 <div class="notice-actions">
-                    <button class="notice-edit-btn line-btn" type="button" data-notice-edit="{{ n.id }}" data-title="{{ n.title }}" data-content="{{ n.content or '' }}">✎ 수정</button>
+                    <button class="notice-edit-btn line-btn" type="button" data-notice-edit="{{ n.id }}" data-title="{{ n.title }}" data-content="{{ n.content or '' }}" data-important="{{ 'true' if n.important else 'false' }}">✎ 수정</button>
                     <form method="post" action="{{ url_for('manage_notices', product_id=product.id) }}"><input type="hidden" name="delete" value="{{ n.id }}"><button class="notice-delete" type="submit" aria-label="{{ n.title }} 공지 삭제">삭제</button></form>
                 </div>
             </div>

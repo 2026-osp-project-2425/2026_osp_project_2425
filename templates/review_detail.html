@@ -17,6 +17,12 @@
     </div>
     {% endif %}
     <p class="review-content preserve-lines">{{ review.description }}</p>
+    {% if user %}
+    <button type="button" id="review-like-button" class="btn btn-white" data-url="{{ url_for('review_like', review_id=review.id) }}"disabled> ♡ 좋아요 </button>
+    <p id="review-like-message"></p>
+    {% else %}
+    <p>좋아요는 로그인 후 사용할 수 있습니다.</p>
+    {% endif %}
 </article>
 <div class="review-back"><a class="detail-link" href="{{ url_for('view_review', product_id=product.id) }}">리뷰 목록으로 →</a></div>
 {% endblock %}

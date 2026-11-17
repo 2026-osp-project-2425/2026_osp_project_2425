@@ -577,3 +577,103 @@
 
         cancelButton.addEventListener('click', resetNoticeForm);
     }
+    
+    const reviewLikeButton = document.getElementById("review-like-button");
+
+if (reviewLikeButton) {
+    const message = document.getElementById("review-like-message");
+    const url = reviewLikeButton.dataset.url;
+    let liked = false;
+
+    function showLikeState(value) {
+        liked = value;
+        reviewLikeButton.textContent =
+            liked ? "♥ 좋아요 취소" : "♡ 좋아요";
+    }
+
+    async function loadLikeState() {
+        try {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error();
+
+            const data = await response.json();
+            showLikeState(data.liked);
+            reviewLikeButton.disabled = false;
+        } catch {
+            message.textContent = "좋아요 상태를 불러오지 못했습니다.";
+        }
+    }
+
+    reviewLikeButton.addEventListener("click", async () => {
+        reviewLikeButton.disabled = true;
+        message.textContent = "";
+
+        try {
+            const response = await fetch(url, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ liked: !liked })
+            });
+
+            if (!response.ok) throw new Error();
+
+            const data = await response.json();
+            showLikeState(data.liked);
+        } catch {
+            message.textContent = "좋아요 처리에 실패했습니다.";
+        } finally {
+            reviewLikeButton.disabled = false;
+        }
+    });
+
+    loadLikeState();
+}
+document.querySelectorAll("button.review-like-small").forEach((button) => {
+    const message = button.parentElement.querySelector(".review-like-message");
+    const url = button.dataset.url;
+    let liked = false;
+
+    function showLikeState(value) {
+        liked = value;
+        button.textContent = liked ? "♥ 좋아요" : "♡ 좋아요";
+        button.classList.toggle("is-liked", liked);
+        button.setAttribute("aria-pressed", String(liked));
+    }
+
+    async function loadLikeState() {
+        try {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error();
+
+            const data = await response.json();
+            showLikeState(data.liked);
+            button.disabled = false;
+        } catch {
+            message.textContent = "좋아요를 불러오지 못했습니다.";
+        }
+    }
+
+    button.addEventListener("click", async () => {
+        button.disabled = true;
+        message.textContent = "";
+
+        try {
+            const response = await fetch(url, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ liked: !liked })
+            });
+
+            if (!response.ok) throw new Error();
+
+            const data = await response.json();
+            showLikeState(data.liked);
+        } catch {
+            message.textContent = "다시 시도해 주세요.";
+        } finally {
+            button.disabled = false;
+        }
+    });
+
+    loadLikeState();
+});

@@ -1,4 +1,5 @@
 """Open Software Platform Flask practice. Run: python app.py"""
+from flask import jsonify
 import csv
 import io
 import json
@@ -466,13 +467,25 @@ def view_review():
     return page("review_list.html", "리뷰 목록", "review", reviews=reviews[(number-1)*4:number*4], listed_count=len(reviews), products=products, product=product, review_count=review_count, average=average, distribution=distribution, sort=sort, current_page=number, pages=pages, product_id=product_id)
 
 @app.route("/review_detail")
-def review_detail():
-    review_id = request.args.get("id", "")
-    review = next((r for r in records("reviews") if r["id"] == review_id), None)
+@app.route("/reviews/<id>")
+def review_detail(id=None):
+    review_id = id or request.args.get("id", "")
+
+    review = next(
+        (r for r in records("reviews") if r["id"] == review_id),
+        None
+    )
+
     if not review:
         abort(404)
-    return page("review_detail.html", "리뷰 상세", "review", review=review, product=product_by_id(review["product_id"]))
 
+    return page(
+        "review_detail.html",
+        "리뷰 상세",
+        "review",
+        review=review,
+        product=product_by_id(review["product_id"])
+    )
 def latest_order(product_id):
     if not session.get("user"):
         return None
@@ -489,8 +502,8 @@ def latest_order(product_id):
 def reg_review():
     if not session.get("user"):
         flash("로그인 후 리뷰를 작성할 수 있어요.", "error")
-        return redirect(url_for("login", next=request.path))
-
+        return redirect(url_for("login", next=url_for("reg_review", product_id=request.values.get("product_id"))))
+        
     username = session["user"]["username"]
     products = {p["id"]: p for p in records("products")}
 
@@ -539,11 +552,24 @@ def reg_review():
             flash("제목, 내용, 1~5점 평점을 입력해 주세요.", "error")
         else:
             try:
-                image, _ = image_upload()
+                review_file = request.files.get("file_input")
+                if not review_file or not review_file.filename:
+                    raise ValueError("리뷰 사진을 선택해 주세요.")
+
+                extension = Path(review_file.filename).suffix.lower()
+
+                if extension not in {".png", ".jpg", ".jpeg", ".gif", ".webp"}:
+                    raise ValueError("이미지 파일을 선택해 주세요.")
+
+                filename = uuid4().hex + extension
+                review_file.save(UPLOADS / filename)
+                image = "images/uploads/" + filename
             except ValueError as error:
                 flash(str(error), "error")
             else:
                 data = dict(
+                    product_name=product["name"],
+                    image_filename=filename,
                     product_id=product_id,
                     title=title,
                     description=description,
@@ -905,6 +931,38 @@ def not_found(error):
 @app.errorhandler(413)
 def too_large(error):
     return page("error.html", "파일 크기 확인", message="첨부 파일은 전체 10MB 이내로 선택해 주세요."), 413
+
+
+@app.route("/review_like/<review_id>", methods=["GET", "POST"])
+def review_like(review_id):
+    user = session.get("user")
+
+    if not user:
+        return jsonify(error="로그인이 필요합니다."), 401
+
+    try:
+        if not any(r["id"] == review_id for r in records("reviews")):
+            return jsonify(error="리뷰를 찾을 수 없습니다."), 404
+
+        username = user["username"]
+
+        if request.method == "GET":
+            return jsonify(
+                liked=DB.get_review_like(review_id, username)
+            )
+
+        data = request.get_json(silent=True)
+
+        if not isinstance(data, dict) or type(data.get("liked")) is not bool:
+            return jsonify(error="좋아요 값이 올바르지 않습니다."), 400
+
+        saved = DB.set_review_like(
+            review_id, username, data["liked"]
+        )
+        return jsonify(liked=saved)    
+
+    except SharedStoreError:
+        return jsonify(error="DB 연결을 확인해 주세요."), 503
 
 if __name__ == "__main__":
     app.run(debug=True)

@@ -27,6 +27,7 @@
                     <span class="chip">{{ product.category or '생활 · 패션' }}</span>
                 </div>
                 <h2 class="detail-name">{{ product.name }}</h2>
+                <a class="btn" href="{{ url_for('reg_review', product_id=product.id) }}">리뷰 작성</a>
                 <p class="detail-host">진행 <a href="{{ url_for('view_list', q=product.seller_id) }}" title="사용자의 다른 상품 보기">{{ product.seller_id }}</a> · 제작 {{ product.manufacturer or '미입력' }}</p>
                 <p class="detail-price">{{ product.price|won }}<span>원</span></p>
                 <div class="funding">
@@ -92,7 +93,7 @@
         <input type="hidden" name="product_id" value="{{ product.id }}">
         <div class="option-head"><h2>옵션 선택</h2><span>{{ '진행자가 등록한 옵션 중에서 골라요' if product.sizes or product.colors else '이 상품은 따로 고를 옵션이 없어요' }}</span></div>
         {% if product.sizes %}<fieldset><legend>사이즈</legend><div class="choices">{% for size in product.sizes %}<label class="choice"><input type="radio" name="size" value="{{ size }}" {{ 'checked' if loop.first }} required><span>{{ size }}</span></label>{% endfor %}</div></fieldset>{% endif %}
-        {% if product.colors %}<fieldset><legend>색상</legend><div class="choices">{% for color in product.colors %}<label class="choice"><input type="radio" name="color" value="{{ color.name }}" {{ 'checked' if loop.first }} required><span>{% if color.hex %}<i class="swatch" style="background:{{ color.hex }}" aria-hidden="true"></i>{% endif %}{{ color.name }}</span></label>{% endfor %}</div></fieldset>{% endif %}
+        {% if product.colors %}<fieldset><legend>색상</legend><div class="choices">{% for color in product.colors %}<label class="choice"><input type="radio" name="color" value="{{ color.name }}" {{ 'checked' if loop.first }} required><span>{% if color.hex %}<i class="swatch" style="background:{{ color.hex }};" aria-hidden="true"></i>{% endif %}{{ color.name }}</span></label>{% endfor %}</div></fieldset>{% endif %}
         <div>
             <label class="option-label" for="quantity">수량</label>
             <div class="stepper">

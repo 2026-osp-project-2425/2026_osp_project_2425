@@ -21,6 +21,14 @@
                     <p class="review-text">{{ r.description }}</p>
                     <div class="review-foot"><span>{{ r.author }}</span><span class="review-foot-right"><time>{{ r.date }}</time><a class="detail-link" href="{{ url_for('review_detail',id=r.id) }}">자세히 보기 →</a></span></div>
                 </div>
+        <div class="review-like-row">
+        {% if user %}
+            <button type="button" class="review-like-small" data-url="{{ url_for('review_like', review_id=r.id) }}" aria-pressed="false" disabled> ♡ 좋아요</button>
+            <span class="review-like-message"></span>
+        {% else %}
+            <a class="review-like-small" href="{{ url_for('login', next=request.full_path) }}">♡ 좋아요</a>
+        {% endif %}
+        </div>
             </article>
         {% else %}<div class="white-card empty-state">{{ '사진이 있는 리뷰가 없습니다.' if sort=='photo' and review_count else '등록된 리뷰가 없습니다.' }}</div>{% endfor %}
         </div>

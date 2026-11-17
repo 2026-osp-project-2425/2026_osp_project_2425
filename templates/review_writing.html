@@ -32,6 +32,7 @@
     </section>
     <form class="form-stack" action="{{ url_for('reg_review') }}" method="post" enctype="multipart/form-data" data-draft="review">
         <input type="hidden" name="product_id" value="{{ product.id }}">
+        <label class="field">상품명<input type="text" name="product_name" value="{{ product.name }}" readonly></label>
         <section class="form-card">
             <div class="section-head"><span class="section-num">1</span><h2>만족도</h2></div>
             <div class="rating-row" data-rating>
@@ -50,7 +51,7 @@
             <div class="upload-control" data-upload>
                 <div class="upload-row">
                     <div class="upload-preview only-selected"><img data-preview alt="선택한 리뷰 사진" hidden></div>
-                    <label class="upload-add" for="review_file">+ 사진 추가<input type="file" id="review_file" name="file_input" accept="image/png,image/jpeg,image/gif,image/webp"></label>
+                    <label class="upload-add" for="review_file">+ 사진 추가<input type="file" id="review_file" name="file_input" accept="image/png,image/jpeg,image/gif,image/webp" required></label>
                 </div>
                 <p class="file-caption" data-file-name>선택한 파일이 없습니다.</p>
             </div>

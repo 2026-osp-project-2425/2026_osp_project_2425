@@ -103,11 +103,10 @@ class DBhandler:
 
     @shared_operation
     def insert_review(self, data):
-        review_id = "r_" + uuid4().hex[:12]
-        self.ref("review").child(review_id).set(
+        review_ref = self.ref("review").push(
             dict(data, created_ts=datetime.now(timezone.utc).isoformat())
         )
-        return review_id
+        return review_ref.key
 
     @shared_operation
     def get_reviews(self):
@@ -122,6 +121,25 @@ class DBhandler:
             key=lambda r: r.get("created_ts", ""),
             reverse=True
         )
+
+    @shared_operation
+    def get_review_like(self, review_id, username):
+        return (
+            self.ref("review_likes")
+            .child(review_id)
+            .child(username)
+            .get()
+        ) is True
+
+    @shared_operation
+    def set_review_like(self, review_id, username, liked):
+        (
+            self.ref("review_likes")
+            .child(review_id)
+            .child(username)
+            .set(liked)
+        )
+        return liked
 
     @shared_operation
     def insert_order(self, data):

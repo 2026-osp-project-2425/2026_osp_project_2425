@@ -165,14 +165,16 @@ def option_summary(orders):
         entry["quantity"] += order["quantity"]
     return sorted(summary.values(), key=lambda entry: entry["quantity"], reverse=True)
 
-def image_upload(field="file_input", required=False):
+
+def image_upload(field="file_input", required=False, missing_message="상품 사진을 선택해 주세요."):
     image = request.files.get(field)
     if not image or not image.filename:
         if required:
-            raise ValueError("상품 사진을 선택해 주세요.")
+            raise ValueError(missing_message)
         return "", ""
     content = image.read(MAX_IMAGE_BYTES + 1)
     return DB.upload_image(content, image.filename), image.filename
+
 
 def image_url(image):
     if not image:
@@ -552,18 +554,11 @@ def reg_review():
             flash("제목, 내용, 1~5점 평점을 입력해 주세요.", "error")
         else:
             try:
-                review_file = request.files.get("file_input")
-                if not review_file or not review_file.filename:
-                    raise ValueError("리뷰 사진을 선택해 주세요.")
+                image, filename = image_upload(
+                    required=True,
+                    missing_message="리뷰 사진을 선택해 주세요."
+                )
 
-                extension = Path(review_file.filename).suffix.lower()
-
-                if extension not in {".png", ".jpg", ".jpeg", ".gif", ".webp"}:
-                    raise ValueError("이미지 파일을 선택해 주세요.")
-
-                filename = uuid4().hex + extension
-                review_file.save(UPLOADS / filename)
-                image = "images/uploads/" + filename
             except ValueError as error:
                 flash(str(error), "error")
             else:

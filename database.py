@@ -123,6 +123,36 @@ class DBhandler:
         )
 
     @shared_operation
+    def update_review(self, review_id, author, changes):
+        if not self.valid_key(review_id):
+            raise ValueError("수정할 리뷰가 없습니다.")
+
+        allowed_fields = (
+            "title", "description", "rating",
+            "image", "image_filename", "images"
+        )
+        allowed = {
+            key: changes[key]
+            for key in allowed_fields
+            if key in changes
+        }
+
+        def update(current):
+            if not isinstance(current, dict):
+                raise ValueError("수정할 리뷰가 없습니다.")
+
+            if current.get("author") != author:
+                raise ValueError("본인이 작성한 리뷰만 수정할 수 있어요.")
+
+            return dict(
+                current,
+                **allowed,
+                updated_ts=datetime.now(timezone.utc).isoformat()
+            )
+
+        self.ref("review").child(review_id).transaction(update)
+
+    @shared_operation
     def get_review_like(self, review_id, username):
         return (
             self.ref("review_likes")

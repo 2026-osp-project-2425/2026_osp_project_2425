@@ -589,6 +589,100 @@ def reg_review():
         joined_items=joined_items
     )
 
+@app.route("/reviews/<id>/edit", methods=["GET", "POST"])
+def edit_review(id):
+    if not session.get("user"):
+        flash("로그인 후 리뷰를 수정할 수 있어요.", "error")
+        return redirect(url_for("login", next=url_for("edit_review", id=id)))
+
+    username = session["user"]["username"]
+
+    review = next(
+        (r for r in records("reviews") if r["id"] == id),
+        None
+    )
+
+    if not review:
+        abort(404)
+
+    if review.get("author") != username:
+        abort(403)
+
+    product = product_by_id(review["product_id"])
+
+    if request.method == "POST":
+        title = request.form.get("title", "").strip()
+        description = request.form.get("description", "").strip()
+        rating = request.form.get("rating", type=int)
+
+        form_review = dict(
+            review,
+            title=title,
+            description=description,
+            rating=rating or 0
+        )
+
+        if not title or not description or rating not in range(1, 6):
+            flash("제목, 내용, 1~5점 평점을 입력해 주세요.", "error")
+            return page(
+                "review_writing.html",
+                "리뷰 수정",
+                "review",
+                product=product,
+                review=form_review,
+                order=None,
+                joined_items=[]
+            ), 400
+
+        try:
+            image, filename = image_upload()
+
+            changes = dict(
+                title=title,
+                description=description,
+                rating=rating
+            )
+
+            if image:
+                changes["image"] = image
+                changes["image_filename"] = filename
+                changes["images"] = []
+
+            DB.update_review(id, username, changes)
+
+        except ValueError as error:
+            flash(str(error), "error")
+            return page(
+                "review_writing.html",
+                "리뷰 수정",
+                "review",
+                product=product,
+                review=form_review,
+                order=None,
+                joined_items=[]
+            ), 400
+
+        except SharedStoreError:
+            app.logger.exception("Firebase review update failed")
+            return page(
+                "error.html",
+                "저장 실패",
+                message="Firebase 연결을 확인하고 다시 시도해 주세요."
+            ), 503
+
+        flash("리뷰가 수정되었습니다.", "success")
+        return redirect(url_for("review_detail", id=id))
+
+    return page(
+        "review_writing.html",
+        "리뷰 수정",
+        "review",
+        product=product,
+        review=review,
+        order=None,
+        joined_items=[]
+    )
+
 @app.route("/cart")
 def cart():
     entries = []

@@ -1,6 +1,35 @@
 {% extends "index.html" %}
 {% block content %}
-{{ product_banner(product, '이 리뷰가 작성된 상품이에요') }}
+<section class="green-panel writing-product">
+    <p class="writing-label">이 리뷰가 작성된 상품이에요</p>
+    <div class="writing-row">
+        <div class="writing-photo">
+            {% if product.image %}
+            <img src="{{ image_url(product.image) }}" alt="">
+            {% else %}
+            사진
+            {% endif %}
+        </div>
+        <div class="writing-info">
+            <p>{{ product.seller_id }} 님의 공동구매로 함께한 상품이에요.</p>
+            <div class="writing-name">
+                <span class="writing-chip">
+                    {{ product.category or '생활 · 패션' }}
+                </span>
+                <b>{{ product.name }}</b>
+                {% if review|option %}
+                <span class="writing-option">{{ review|option }}</span>
+                {% endif %}
+            </div>
+            <div class="writing-links">
+                <a href="{{ url_for('view_review', product_id=product.id) }}">
+                    다른 리뷰 확인하기
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
 <article class="review-article">
     <div class="review-head">
         {% if review|option %}<p class="review-option">구매 옵션 <b>{{ review|option }}</b></p>{% endif %}
@@ -20,7 +49,7 @@
 
     {% if user and user.username == review.author %}
     <div class="form-submit">
-        <a class="btn btn-white"
+        <a class="btn"
            href="{{ url_for('edit_review', id=review.id) }}">
             리뷰 수정하기
         </a>

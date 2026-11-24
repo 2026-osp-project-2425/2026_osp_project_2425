@@ -372,7 +372,12 @@
 
     const productForm = document.getElementById('product-form');
     if (productForm) {
-        const todayStr = new Date().toISOString().split('T')[0];
+        // 한국 시간 기준
+        const now = new Date();
+        const todayStr = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
+            .toISOString()
+            .split('T')[0];
+
         const startDateInput = document.getElementById('start_date');
         const endDateInput = document.getElementById('end_date');
         const pickupDateInput = document.getElementById('pickup_date');
@@ -381,14 +386,38 @@
         if (endDateInput) endDateInput.min = todayStr;
         if (pickupDateInput) pickupDateInput.min = todayStr;
 
-        // 시작일 선택 시 마감일의 최소 날짜(min)를 시작일로 동적 연동
-        if (startDateInput && endDateInput) {
+        // 오늘 이전 날짜 입력 차단 + 마감일 최소 날짜(min) 연동
+        if (startDateInput) {
             startDateInput.addEventListener('change', () => {
-                if (startDateInput.value) {
-                    endDateInput.min = startDateInput.value;
-                    if (endDateInput.value && endDateInput.value < startDateInput.value) {
-                        endDateInput.value = startDateInput.value;
+                if (startDateInput.value && startDateInput.value < todayStr) {
+                    alert('시작일은 오늘 이전 날짜를 선택할 수 없습니다.');
+                    startDateInput.value = todayStr;
+                }
+
+                const minEndDate = startDateInput.value || todayStr;
+                if (endDateInput) {
+                    endDateInput.min = minEndDate;
+                    if (endDateInput.value && endDateInput.value < minEndDate) {
+                        endDateInput.value = minEndDate;
                     }
+                }
+            });
+        }
+
+        // 키보드 입력 시에도 마감일 오늘 이전 날짜 차단
+        if (endDateInput) {
+            endDateInput.addEventListener('change', () => {
+                const minEndDate = (startDateInput && startDateInput.value) ? startDateInput.value : todayStr;
+                if (endDateInput.value && endDateInput.value < minEndDate) {
+                    endDateInput.value = minEndDate;
+                }
+            });
+        }
+
+        if (pickupDateInput) {
+            pickupDateInput.addEventListener('change', () => {
+                if (pickupDateInput.value && pickupDateInput.value < todayStr) {
+                    pickupDateInput.value = todayStr;
                 }
             });
         }
@@ -441,13 +470,30 @@
                 }
             });
 
-            // 마감일이 시작일보다 빠른 경우 예외 처리
-            if (startDateInput && endDateInput && startDateInput.value && endDateInput.value) {
-                if (endDateInput.value < startDateInput.value) {
+            // 시작일이 오늘 이전인 경우 예외 처리
+            if (startDateInput && startDateInput.value && startDateInput.value < todayStr) {
+                startDateInput.classList.add('field-invalid');
+                if (!invalidFields.includes(startDateInput)) {
+                    invalidFields.push(startDateInput);
+                }
+            }
+
+            // 마감일이 시작일(또는 오늘)보다 빠른 경우 예외 처리
+            if (endDateInput && endDateInput.value) {
+                const minEndDate = (startDateInput && startDateInput.value) ? startDateInput.value : todayStr;
+                if (endDateInput.value < minEndDate) {
                     endDateInput.classList.add('field-invalid');
                     if (!invalidFields.includes(endDateInput)) {
                         invalidFields.push(endDateInput);
                     }
+                }
+            }
+
+            // 픽업일이 오늘 이전인 경우 예외 처리
+            if (pickupDateInput && pickupDateInput.value && pickupDateInput.value < todayStr) {
+                pickupDateInput.classList.add('field-invalid');
+                if (!invalidFields.includes(pickupDateInput)) {
+                    invalidFields.push(pickupDateInput);
                 }
             }
 

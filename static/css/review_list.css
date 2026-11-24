@@ -18,8 +18,6 @@
 .review-foot-right { display:flex; align-items:center; gap:20px; }
 .review-foot time { color:var(--muted); font-size:13px; }
 .review-foot .detail-link { font-weight:700; }
-.pagination .pill { min-width:36px; padding:0 12px; border:0; border-radius:10px; font-size:14px; font-weight:700; }
-.pagination .pill.on { background:var(--green); }
 .satisfaction { display:flex; flex-direction:column; gap:18px; padding:28px 26px; border-radius:24px; }
 .satisfaction h3 { text-align:center; font-size:17px; font-weight:700; }
 .average { text-align:center; }
@@ -34,7 +32,7 @@
 .dist-bar div { height:100%; border-radius:999px; background:var(--star-bright); }
 .review-total { display:flex; justify-content:space-between; align-items:baseline; font-size:14px; }
 .review-total b { font-size:24px; }
-.write-review { display:flex; align-items:center; justify-content:center; min-height:52px; border-radius:16px; background:#fff; color:var(--green); font-size:15px; font-weight:800; }
+.write-review { display:flex; align-items:center; justify-content:center; min-height:52px; border-radius:16px; border:1px solid var(--green); background:#fff; color:var(--green); font-size:15px; font-weight:800; }
 .write-review:hover { background:#f3f6f4; }
 @media(max-width:480px) { .review-card { padding:20px; } }
 .review-like-row { display: flex; align-items: center; gap: 8px; margin-top: 8px;}

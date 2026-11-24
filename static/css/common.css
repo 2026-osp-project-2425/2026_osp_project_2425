@@ -97,7 +97,26 @@ progress::-webkit-progress-bar { background:#e5e9e6; border-radius:var(--radius-
 progress::-webkit-progress-value { background:var(--green); border-radius:var(--radius-pill); }
 progress::-moz-progress-bar { background:var(--green); border-radius:var(--radius-pill); }
 .pagination { display:flex; justify-content:center; gap:8px; margin-top:20px; }
-.pagination [aria-disabled] { color:#a3aba8; }
+.pagination .pill {
+    min-width: 36px;
+    padding: 0 12px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 700;
+}
+.pagination .pill.on {
+    background: var(--green);
+    border-color: var(--green);
+    color: #fff;
+}
+.pagination [aria-disabled] {
+    color: #a3aba8;
+    background: #f8f9f8;
+    border-color: var(--line);
+    pointer-events: none;
+}
 .stars { color:var(--star); font-size:18px; letter-spacing:1px; white-space:nowrap; }
 .star-off { color:var(--star-off); }
 .preserve-lines { white-space:pre-wrap; }

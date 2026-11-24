@@ -3,8 +3,8 @@
 .review-sort select { width:140px; height:40px; padding:0 14px; font-size:14px; }
 .review-stack {display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px;}
 .review-card { display:flex; flex-wrap:wrap; gap:22px; padding:28px; background:#fff; border-radius:20px; }
-.review-photo { display:flex; align-items:center; justify-content:center; flex:0 0 128px; height:128px; overflow:hidden; background:var(--placeholder); border-radius:14px; color:#62666a; font-size:13px; }
-.review-photo.empty { background:#f3f2ee; color:#9a9ea1; }
+.review-photo { display:flex; align-items:center; justify-content:center; flex:0 0 128px; height:128px; overflow:hidden; background:var(--green); border-radius:14px; color:#fff; font-size:13px; }
+.review-photo.empty { background:var(--green); color:#fff; }
 .review-photo img { width:100%; height:100%; object-fit:cover; display:block; }
 .review-body { flex:1 1 300px; min-width:0; display:flex; flex-direction:column; gap:8px; }
 .review-top { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:8px; }

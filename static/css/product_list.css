@@ -21,7 +21,6 @@
 .product-funding b.waiting { color:var(--muted); }
 .product-card>.detail-link { align-self:flex-end; margin-top:auto; }
 .closed-card { background:#fbfaf7; border:1px solid #e6e4dc; }
-.closed-card .product-photo { background:#e2e1db; }
 .closed-card .chip { background:var(--line); color:var(--muted); }
 .closed-card h3 { color:var(--body); }
 .closed-mark { position:absolute; top:12px; left:12px; padding:3px 8px; border-radius:6px; background:var(--ink); color:#fff; font-size:12px; font-weight:800; }

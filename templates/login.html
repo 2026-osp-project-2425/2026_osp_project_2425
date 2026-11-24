@@ -8,7 +8,7 @@
         <button class="btn login-submit" type="submit">로그인</button>
         <div class="login-help"><button type="button" data-help="회원가입 때 입력한 ID로 로그인해 주세요. 이 실습에는 이메일 발송을 통한 ID 찾기 기능이 연결되어 있지 않습니다.">아이디 찾기</button><span aria-hidden="true">·</span><button type="button" data-help="이 실습에는 이메일 발송을 통한 비밀번호 재설정 기능이 연결되어 있지 않습니다. 다른 ID로 실습용 계정을 새로 만들 수 있습니다.">비밀번호 찾기</button></div>
     </form>
-    {% if user %}<form action="{{ url_for('logout') }}" method="post"><button class="btn btn-white full login-alt" type="submit">로그아웃</button></form>{% else %}<a class="btn btn-white login-alt" href="{{ url_for('signup') }}">아직 계정이 없나요? 회원가입</a>{% endif %}
+    {% if user %}<form action="{{ url_for('logout') }}" method="post"><button class="btn btn-white full login-alt logout" type="submit">로그아웃</button></form>{% else %}<a class="btn btn-white login-alt register" href="{{ url_for('signup') }}">회원가입하기</a>{% endif %}
 </div>
 
 {% set login_errors = get_flashed_messages(category_filter=["login_error"]) %}

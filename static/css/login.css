@@ -6,4 +6,5 @@
 .login-help { display:flex; justify-content:center; gap:8px; color:var(--muted); font-size:13px; }
 .login-help button { padding:0; background:transparent; color:var(--muted); text-decoration:underline; }
 .login-alt { min-height:52px; background:transparent; font-size:15px; }
+.login-alt.logout { color:var(--urgent); border-color:var(--urgent); }
 @media(max-width:480px) { .login-wrap { margin-top:16px; } .login-card { padding:28px 20px; } }

@@ -78,7 +78,8 @@ form { margin:0; }
 .pill.on { background:var(--ink); border-color:var(--ink); color:#fff; }
 .list-sort select { width:150px; height:40px; padding:0 14px; font-size:14px; font-weight:var(--fw-medium); cursor:pointer; }
 
-.default-img, .photo-slot, .thumb, .upload-preview { background: var(--placeholder); }
+.photo-slot, .thumb, .upload-preview { background: var(--placeholder); }
+.default-img { background: var(--green); }
 .default-img::before, .photo-slot::before, .thumb::before, .upload-preview::before { display: none !important; }
 .upload-preview .remove-btn { position:absolute; top:4px; right:4px; background:rgba(0,0,0,0.6); color:#fff; border:0; border-radius:50%; width:22px; height:22px; cursor:pointer; font-size:12px; display:flex; align-items:center; justify-content:center; z-index:2; }
 
@@ -150,7 +151,7 @@ progress::-moz-progress-bar { background:var(--green); border-radius:var(--radiu
 .password-field button { position:absolute; right:3px; top:50%; transform:translateY(-50%); color:var(--muted); }
 .upload-row { display:flex; flex-wrap:wrap; gap:12px; }
 .upload-preview,.upload-add { position:relative; display:flex; align-items:center; justify-content:center; width:120px; height:120px; overflow:hidden; border-radius:var(--radius-btn); color:#62666a; font-size:13px; font-weight:var(--fw-regular); }
-.upload-preview { background:linear-gradient(135deg, var(--green-dark), var(--green)); position:relative; }
+.upload-preview { background:linear-gradient(135deg, var(--green-dark), var(--green)); position:relative; text-color:#fff; }
 .upload-preview::before { content:""; width:36%; height:36%; border-radius:var(--radius-pill); background:var(--soft-green); opacity:.85; }
 .upload-preview img { position:relative; z-index:1; width:100%; height:100%; object-fit:cover; display:block; }
 .upload-preview img[hidden] { display:none; }

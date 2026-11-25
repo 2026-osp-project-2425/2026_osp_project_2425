@@ -79,6 +79,10 @@ def shared_products():
         return g.shared_products
     return DB.get_items()
 
+@app.context_processor
+def inject_user():
+    return dict(user=session.get('user'))
+
 def canonical_product_id(value):
     value = str(value or "")
     products = shared_products()

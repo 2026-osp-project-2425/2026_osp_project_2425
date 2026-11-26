@@ -172,6 +172,57 @@ class DBhandler:
         return liked
 
     @shared_operation
+    def insert_qna(self, product_id, data):
+        if not self.valid_key(product_id):
+            raise ValueError("상품 정보가 올바르지 않습니다.")
+
+        qna_ref = self.ref("qna").child(product_id).push(
+            dict(
+                data,
+                answer="",
+                created_ts=datetime.now(timezone.utc).isoformat()
+            )
+        )
+        return qna_ref.key
+
+    @shared_operation
+    def get_qnas(self, product_id):
+        if not self.valid_key(product_id):
+            return []
+
+        values = self.ref("qna").child(product_id).get() or {}
+        qnas = [
+            dict(value, id=key)
+            for key, value in values.items()
+            if isinstance(value, dict)
+        ]
+        return sorted(
+            qnas,
+            key=lambda q: q.get("created_ts", ""),
+            reverse=True
+        )
+
+    @shared_operation
+    def answer_qna(self, product_id, qna_id, answer):
+        if not (
+            self.valid_key(product_id)
+            and self.valid_key(qna_id)
+        ):
+            raise ValueError("답변할 문의가 없습니다.")
+
+        def update(current):
+            if not isinstance(current, dict):
+                raise ValueError("답변할 문의가 없습니다.")
+
+            return dict(
+                current,
+                answer=answer,
+                answer_date=datetime.now().strftime("%Y.%m.%d %H:%M")
+            )
+
+        self.ref("qna").child(product_id).child(qna_id).transaction(update)
+
+    @shared_operation
     def insert_order(self, data):
         order_id = "o_" + uuid4().hex[:12]
         self.ref("order").child(order_id).set(

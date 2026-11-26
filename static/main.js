@@ -315,6 +315,15 @@
         update();
     });
 
+    // 문의 및 답변 글자 수 표시
+    document.querySelectorAll('[data-count-target]').forEach((field) => {
+        const current = document.getElementById(field.dataset.countTarget);
+        if (!current) return;
+        const update = () => { current.textContent = field.value.length; };
+        field.addEventListener('input', update);
+        update();
+    });
+
     document.querySelectorAll('[data-password-rules]').forEach((rules) => {
         const input = document.getElementById(rules.dataset.passwordRules);
         const checks = {

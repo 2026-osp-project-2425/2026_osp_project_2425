@@ -39,7 +39,16 @@ CHAT_PATTERN = r"https://open\.kakao\.com/\S+"
 OPTION_CATEGORY = CATEGORIES[0]
 HEX_PATTERN = r"#[0-9a-fA-F]{6}"
 LIST_SORTS = {"popular": "인기순", "latest": "최신순", "reviews": "리뷰 많은 순", "rating": "평점순"}
-MANAGE_TABS = {"info": "상품 정보", "participants": "참여자 관리", "orders": "주문·정산 관리", "reviews": "리뷰 관리"}
+QNA_CATEGORIES = ["사이즈·옵션", "수령·배송", "결제", "기타"]
+QNA_MAX_LENGTH = 300
+
+MANAGE_TABS = {
+    "info": "상품 정보",
+    "participants": "참여자 관리",
+    "orders": "주문·정산 관리",
+    "reviews": "리뷰 관리",
+    "qna": "문의 관리"
+}
 
 def connect():
     db = sqlite3.connect(DB_PATH)
@@ -209,6 +218,18 @@ def won(value):
         return f"{int(value):,}"
     except (TypeError, ValueError):
         return "0"
+
+@app.template_filter("mask_name")
+def mask_name(value):
+    name = str(value or "").strip()
+
+    if not name:
+        return "익명"
+
+    if len(name) == 1:
+        return name + "*"
+
+    return name[0] + "*" * (len(name) - 1)
 
 def parse_datetime(value, pattern):
     try:
@@ -443,14 +464,74 @@ def product_detail_context(product):
 @app.route("/products/<id>")
 def product_detail(id):
     product = product_by_id(id)
+    tab = "qna" if request.args.get("tab") == "qna" else "info"
+    qna_list = DB.get_qnas(product["id"])
+    review_count = sum(
+        1 for r in records("reviews")
+        if r["product_id"] == product["id"]
+    )
 
     return page(
         "product_detail.html",
         "상품 상세",
         "list",
         product=product,
+        tab=tab,
+        qna_list=qna_list,
+        qna_answered=sum(1 for q in qna_list if q.get("answer")),
+        qna_waiting=sum(1 for q in qna_list if not q.get("answer")),
+        qna_categories=QNA_CATEGORIES,
+        qna_max=QNA_MAX_LENGTH,
+        review_count=review_count,
         **product_detail_context(product)
     )
+@app.route("/products/<id>/qna", methods=["POST"])
+def product_qna(id):
+    product = product_by_id(id)
+
+    if not session.get("user"):
+        flash("로그인 후 문의할 수 있어요.", "error")
+        return redirect(url_for(
+            "login",
+            next=url_for(
+                "product_detail",
+                id=product["id"],
+                tab="qna"
+            )
+        ))
+
+    question = request.form.get("question", "").strip()
+    category = request.form.get("category", "")
+
+    if category not in QNA_CATEGORIES:
+        category = QNA_CATEGORIES[-1]
+
+    if not question or len(question) > QNA_MAX_LENGTH:
+        flash(
+            f"문의 내용을 {QNA_MAX_LENGTH}자 이내로 입력해 주세요.",
+            "error"
+        )
+    else:
+        user = session["user"]
+
+        DB.insert_qna(product["id"], dict(
+            author=user["username"],
+            author_name=user.get("nickname") or user.get("name") or user["username"],
+            category=category,
+            question=question,
+            date=datetime.now().strftime("%Y.%m.%d %H:%M"),
+        ))
+
+        flash(
+            "문의가 등록되었어요. 진행자가 답변하면 여기에서 확인할 수 있어요.",
+            "success"
+        )
+
+    return redirect(url_for(
+        "product_detail",
+        id=product["id"],
+        tab="qna"
+    ))
 @app.route("/review")
 def view_review():
     reviews = records("reviews")
@@ -931,15 +1012,74 @@ def account_edit():
 @app.route("/manage/<product_id>")
 def manage(product_id):
     product = owned_product(product_id)
+    product_id = product["id"]
+
     tab = request.args.get("tab") if request.args.get("tab") in (*MANAGE_TABS, "notice") else "participants"
     orders = order_rows(product_id=product_id)
     query = request.args.get("q", "").strip()
-    listed = [o for o in orders if query.casefold() in f"{o['name'] or ''} {o['username']}".casefold()] if query else orders
+
+    listed = [
+        o for o in orders
+        if query.casefold() in f"{o['name'] or ''} {o['username']}".casefold()
+    ] if query else orders
+
     pages = max(1, math.ceil(len(listed) / 5))
     number = min(max(request.args.get("page", 1, type=int), 1), pages)
-    reviews = [r for r in records("reviews") if r["product_id"] == product_id]
-    notices = sorted(product.get("notices", []), key=lambda n: (n["important"], n["id"]), reverse=True)
-    return page("manage.html", "공동구매 관리", "account", product=product, state=funding(product), tab=tab, tabs=MANAGE_TABS, orders=orders, listed=listed[(number-1)*5:number*5], listed_count=len(listed), query=query, current_page=number, pages=pages, options=option_summary(orders), quantity=sum(o["quantity"] for o in orders), reviews=reviews, notices=notices, steps=stages(product, ("종료", ""), finished=True), **product_detail_context(product))
+
+    reviews = [
+        r for r in records("reviews")
+        if r["product_id"] == product_id
+    ]
+
+    notices = sorted(
+        product.get("notices", []),
+        key=lambda n: (n["important"], n["id"]),
+        reverse=True
+    )
+
+    qna_all = DB.get_qnas(product_id)
+    qna_waiting = sum(
+        1 for q in qna_all
+        if not q.get("answer")
+    )
+
+    qna_filter = request.args.get("filter") if request.args.get("filter") in ("wait", "done") else "all"
+
+    qna_list = [
+        q for q in qna_all
+        if qna_filter == "all"
+        or bool(q.get("answer")) == (qna_filter == "done")
+    ]
+
+    buyers = {o["username"] for o in orders}
+
+    return page(
+        "manage.html",
+        "공동구매 관리",
+        "account",
+        product=product,
+        state=funding(product),
+        tab=tab,
+        tabs=MANAGE_TABS,
+        orders=orders,
+        qna_list=qna_list,
+        qna_total=len(qna_all),
+        qna_waiting=qna_waiting,
+        qna_filter=qna_filter,
+        buyers=buyers,
+        qna_max=QNA_MAX_LENGTH,
+        listed=listed[(number-1)*5:number*5],
+        listed_count=len(listed),
+        query=query,
+        current_page=number,
+        pages=pages,
+        options=option_summary(orders),
+        quantity=sum(o["quantity"] for o in orders),
+        reviews=reviews,
+        notices=notices,
+        steps=stages(product, ("종료", ""), finished=True),
+        **product_detail_context(product)
+    )
 
 @app.route("/manage/<product_id>/notices", methods=["POST"])
 def manage_notices(product_id):
@@ -993,6 +1133,32 @@ def manage_notices(product_id):
 
     return redirect(url_for("manage", product_id=product_id, tab="notice"))
 
+@app.route("/manage/<product_id>/qna", methods=["POST"])
+def manage_qna(product_id):
+    product = owned_product(product_id)
+
+    qna_id = request.form.get("qna_id", "")
+    answer = request.form.get("answer", "").strip()
+
+    if not answer or len(answer) > QNA_MAX_LENGTH:
+        flash(
+            f"답변을 {QNA_MAX_LENGTH}자 이내로 입력해 주세요.",
+            "error"
+        )
+    else:
+        try:
+            DB.answer_qna(product["id"], qna_id, answer)
+        except ValueError as error:
+            flash(str(error), "error")
+        else:
+            flash("답변을 등록했어요.", "success")
+
+    return redirect(url_for(
+        "manage",
+        product_id=product["id"],
+        tab="qna",
+        filter=request.form.get("filter") or None
+    ))
 def spreadsheet_safe(value):
     # 엑셀이 수식으로 실행하지 않도록 수식 기호로 시작하는 값 앞에 '를 붙인다.
     text = str(value)

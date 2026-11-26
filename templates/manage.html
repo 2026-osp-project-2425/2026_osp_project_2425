@@ -40,7 +40,9 @@
     </section>
 
     <nav class="sub-tabs manage-tabs" aria-label="관리 메뉴">
-        {% for key,text in tabs.items() %}<a class="{{ 'on' if tab == key else '' }}" href="{{ url_for('manage', product_id=product.id, tab=key) }}" {% if tab == key %}aria-current="page"{% endif %}>{{ text }}{% if key == 'reviews' and reviews %} <span class="status-chip wait">{{ reviews|length }}</span>{% endif %}</a>{% endfor %}
+        {% for key,text in tabs.items() %}
+        <a class="{{ 'on' if tab == key else '' }}" href="{{ url_for('manage', product_id=product.id, tab=key) }}" {% if tab == key %}aria-current="page"{% endif %}>{{ text }}{% if key == 'reviews' and reviews %} <span class="status-chip wait">{{ reviews|length }}</span>{% elif key == 'qna' and qna_waiting %} <span class="status-chip wait">{{ qna_waiting }}</span>{% endif %}</a>
+        {% endfor %}
     </nav>
 
     <div class="manage-layout">
@@ -118,27 +120,53 @@
                 </div>
             </div>
             {% else %}<p class="table-empty">등록한 공지사항이 없어요. 공지는 참여자의 참여 상품 상세 화면에 보여요.</p>{% endfor %}
-        {% elif tab == 'contact' or tab == 'qna' %}
-            <h2 class="panel-title">문의 목록 및 답변</h2>
-            {% for q in qna_list|default([]) %}
+        {% elif tab == 'qna' %}
+            <div class="panel-row">
+                <h2 class="panel-title">문의 목록 및 답변 <span>({{ qna_total }}건)</span></h2>
+                <span class="status-chip wait">답변 대기 {{ qna_waiting }}건</span>
+            </div>
+
+            <nav class="qna-filters" aria-label="문의 상태 필터">
+                <a class="{{ 'on' if qna_filter == 'all' else '' }}" href="{{ url_for('manage', product_id=product.id, tab='qna', filter='all') }}">전체 {{ qna_total }}</a>
+                <a class="{{ 'on' if qna_filter == 'wait' else '' }}" href="{{ url_for('manage', product_id=product.id, tab='qna', filter='wait') }}">답변 대기 {{ qna_waiting }}</a>
+                <a class="{{ 'on' if qna_filter == 'done' else '' }}" href="{{ url_for('manage', product_id=product.id, tab='qna', filter='done') }}">답변 완료 {{ qna_total - qna_waiting }}</a>
+            </nav>
+
+            {% for q in qna_list %}
             <div class="qna-card">
                 <div class="qna-head">
                     <span class="status-chip {{ 'done' if q.answer else 'wait' }}">{{ '답변 완료' if q.answer else '답변 대기' }}</span>
-                    <span class="status-chip {{ 'off' if q.is_private else 'soft' }}">{{ '비공개 (판매자에게만)' if q.is_private else '전체 공개' }}</span>
-                    <span class="muted small">{{ q.author }} · {{ q.date }}</span>
+                    <span class="status-chip soft">{{ q.category or '기타' }}</span>
+                    <span class="status-chip {{ 'active' if q.author in buyers else 'off' }}">{{ '참여자' if q.author in buyers else '미참여자' }}</span>
+                    {% if q.is_private %}<span class="status-chip off">비공개</span>{% endif %}
+                    <span class="muted small">{{ q.author_name or q.author }} · {{ q.date }}</span>
                 </div>
-                <p class="qna-question"><b>Q.</b> {{ q.question }}</p>
+                <p class="qna-question preserve-lines"><b>Q.</b> {{ q.question }}</p>
+
                 {% if q.answer %}
-                <div class="qna-answer-box"><b>A.</b> {{ q.answer }}</div>
-                {% else %}
-                <form class="qna-answer-form" method="post" action="{{ url_for('manage_qna', product_id=product.id) if url_for else '#' }}">
-                    <input type="hidden" name="qna_id" value="{{ q.id }}">
-                    <textarea name="answer" placeholder="답변을 입력해 주세요" required rows="2"></textarea>
-                    <button class="fill-btn small-btn" type="submit">답변 등록</button>
-                </form>
+                <div class="qna-answer-box">
+                    <div class="qna-answer-head"><b>진행자 답변</b><span class="muted small">{{ q.answer_date or '' }}</span></div>
+                    <p class="preserve-lines"><b>A.</b> {{ q.answer }}</p>
+                </div>
+                <details class="qna-edit">
+                    <summary class="line-btn">✎ 답변 수정</summary>
                 {% endif %}
+
+                <form class="qna-answer-form" method="post" action="{{ url_for('manage_qna', product_id=product.id) }}">
+                    <input type="hidden" name="qna_id" value="{{ q.id }}">
+                    <input type="hidden" name="filter" value="{{ qna_filter }}">
+                    <textarea name="answer" placeholder="답변을 입력해 주세요." maxlength="{{ qna_max }}" rows="3" data-count-target="answer-count-{{ q.id }}" required>{{ q.answer or '' }}</textarea>
+                    <div class="qna-answer-actions">
+                        <span class="muted small"><span id="answer-count-{{ q.id }}">{{ (q.answer or '')|length }}</span>/{{ qna_max }}자</span>
+                        <button class="fill-btn small-btn" type="submit">{{ '답변 수정' if q.answer else '답변 등록' }}</button>
+                    </div>
+                </form>
+
+                {% if q.answer %}</details>{% endif %}
             </div>
-            {% else %}<p class="table-empty">아직 등록된 문의가 없습니다.</p>{% endfor %}
+            {% else %}
+            <p class="table-empty">{{ '답변 대기 중인 문의가 없어요.' if qna_filter == 'wait' else '답변 완료된 문의가 없어요.' if qna_filter == 'done' else '아직 등록된 문의가 없어요.' }}</p>
+            {% endfor %}
         {% else %}
             <div class="panel-row"><h2 class="panel-title">상품 정보</h2><a class="line-btn" href="{{ url_for('edit_item', product_id=product.id) }}">✎ 수정하기</a></div>
             <dl class="kv info-kv">

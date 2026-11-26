@@ -543,6 +543,12 @@ def view_review():
     review_count = len(reviews)
     average = sum(r["rating"] for r in reviews) / review_count if reviews else 0
     distribution = [(score, sum(r["rating"] == score for r in reviews)) for score in range(5, 0, -1)]
+
+    # 공동구매 참여 여부 및 본인 리뷰 확인
+    joined = bool(product and latest_order(product_id))
+    username = session["user"]["username"] if session.get("user") else None
+    my_review = next((r for r in reviews if r.get("author") == username), None) if joined else None
+
     sort = request.args.get("sort", "latest")
     if sort == "rating":
         reviews.sort(key=lambda r: r["rating"], reverse=True)
@@ -551,7 +557,7 @@ def view_review():
     products = {p["id"]: p for p in records("products")}
     pages = max(1, math.ceil(len(reviews) / 4))
     number = min(max(request.args.get("page", 1, type=int), 1), pages)
-    return page("review_list.html", "리뷰 목록", "review", reviews=reviews[(number-1)*4:number*4], listed_count=len(reviews), products=products, product=product, review_count=review_count, average=average, distribution=distribution, sort=sort, current_page=number, pages=pages, product_id=product_id)
+    return page("review_list.html", "리뷰 목록", "review", reviews=reviews[(number-1)*4:number*4], listed_count=len(reviews), products=products, product=product, review_count=review_count, average=average, distribution=distribution, sort=sort, current_page=number, pages=pages, product_id=product_id, joined=joined, my_review=my_review)
 
 @app.route("/review_detail")
 @app.route("/reviews/<id>")

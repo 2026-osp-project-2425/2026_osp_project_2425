@@ -27,7 +27,6 @@
                     <span class="chip">{{ product.category or '생활 · 패션' }}</span>
                 </div>
                 <h2 class="detail-name">{{ product.name }}</h2>
-                <a class="btn" href="{{ url_for('reg_review', product_id=product.id) }}">리뷰 작성</a>
                 <p class="detail-host">진행 <a href="{{ url_for('view_list', q=product.seller_id) }}" title="사용자의 다른 상품 보기">{{ product.seller_id }}</a> · 제작 {{ product.manufacturer or '미입력' }}</p>
                 <p class="detail-price">{{ product.price|won }}<span>원</span></p>
                 <div class="funding">

@@ -41,25 +41,15 @@
             </div>
         </section>
 
+        <section class="detail-card detail-content-card">
             <nav class="detail-tabs" aria-label="상품 상세 메뉴">
-            <a class="detail-tab {{ 'on' if tab == 'info' else '' }}"
-               href="{{ url_for('product_detail', id=product.id, tab='info') }}">
-                상품 정보
-            </a>
-
-            <a class="detail-tab {{ 'on' if tab == 'qna' else '' }}"
-               href="{{ url_for('product_detail', id=product.id, tab='qna') }}">
-                문의 <span>{{ qna_list|length }}</span>
-            </a>
-
-            <a class="detail-tab"
-               href="{{ url_for('view_review', product_id=product.id) }}">
-                리뷰 <span>{{ review_count }}</span>
-            </a>
-        </nav>
+                <a class="detail-tab {{ 'on' if tab == 'info' else '' }}" href="{{ url_for('product_detail', id=product.id, tab='info') }}">상품 정보</a>
+                <a class="detail-tab {{ 'on' if tab == 'qna' else '' }}" href="{{ url_for('product_detail', id=product.id, tab='qna') }}">문의 <span>{{ qna_list|length }}</span></a>
+                <a class="detail-tab" href="{{ url_for('view_review', product_id=product.id) }}">리뷰 <span>{{ review_count }}</span></a>
+            </nav>
 
         {% if tab == 'info' %}
-        <section class="detail-card">
+        <div class="detail-tab-content">
             <h2>수령 및 상세 안내</h2>
             <div class="pickup-grid">
                 <div class="pickup-box"><span>수령 일시</span><strong>{{ pickup_text }}</strong></div>
@@ -72,74 +62,67 @@
                 <div><dt>문의 이메일</dt><dd>{{ product.email }}</dd></div>
                 <div><dt>상세 설명</dt><dd class="preserve-lines">{{ product.description or '등록된 설명이 없습니다.' }}</dd></div>
             </dl>
-        </section>
+        </div>
         {% endif %}
 
         {% if tab == 'qna' %}
-        <section class="detail-card qna-section">
-            <div class="qna-section-head">
-                <h2>상품 문의 (Q&A)</h2>
-                <p class="muted small">상품에 대해 궁금한 점을 진행자에게 질문해 보세요.</p>
-            </div>
-
-            <div class="qna-stats">
-                <div class="qna-stat"><span>전체 문의</span><strong>{{ qna_list|length }}</strong></div>
-                <div class="qna-stat"><span>답변 완료</span><strong>{{ qna_answered }}</strong></div>
-                <div class="qna-stat"><span>답변 대기</span><strong>{{ qna_waiting }}</strong></div>
+        <div class="detail-tab-content qna-section">
+            <div class="qna-toolbar">
+                <span class="qna-summary">진행자 답변 <b>{{ qna_answered }}</b> · 답변 대기 <b class="wait-text">{{ qna_waiting }}</b></span>
+                {% if user %}
+                <button class="qna-open-btn" type="button" data-qna-toggle aria-controls="qna-write" aria-expanded="false">✎ 문의하기</button>
+                {% else %}
+                <a class="qna-open-btn" href="{{ url_for('login', next=url_for('product_detail', id=product.id, tab='qna')) }}">✎ 문의하기</a>
+                {% endif %}
             </div>
 
             {% if user %}
-            <form class="qna-write-form" method="post" action="{{ url_for('product_qna', id=product.id) }}">
-                <div class="qna-field">
-                    <label for="qna-category">문의 유형</label>
-                    <select id="qna-category" name="category" required>
-                        {% for category in qna_categories %}<option value="{{ category }}">{{ category }}</option>{% endfor %}
-                    </select>
-                </div>
+            <form class="qna-write-form" id="qna-write" method="post" action="{{ url_for('product_qna', id=product.id) }}" hidden>
+                <b class="qna-write-title">진행자에게 문의하기</b>
+                <fieldset class="qna-types">
+                    <legend>문의 유형</legend>
+                    {% for category in qna_categories %}
+                    <label class="qna-type"><input type="radio" name="category" value="{{ category }}" {{ 'checked' if loop.first }} required><span>{{ category }}</span></label>
+                    {% endfor %}
+                </fieldset>
                 <div class="qna-field">
                     <label for="qna-question">문의 내용</label>
-                    <textarea id="qna-question" name="question" placeholder="궁금한 내용을 입력해 주세요." maxlength="{{ qna_max }}" rows="4" data-count-target="qna-count" required></textarea>
+                    <textarea id="qna-question" name="question" placeholder="예: S 사이즈 어깨너비가 몇 cm인가요?" maxlength="{{ qna_max }}" rows="4" data-count-target="qna-count" required></textarea>
+                    <span class="qna-counter"><span id="qna-count">0</span> / {{ qna_max }}자</span>
                 </div>
                 <div class="qna-write-actions">
-                    <span class="qna-counter muted small"><span id="qna-count">0</span>/{{ qna_max }}자</span>
-                    <button class="btn btn-white" type="submit">문의 등록</button>
+                    <span class="muted small">문의는 공개되며 닉네임은 일부 가려져 표시돼요. 개인정보는 적지 말아 주세요.</span>
+                    <button class="qna-submit" type="submit">문의 등록</button>
                 </div>
-                <p class="qna-write-note muted small">문의는 공개되며 작성자의 닉네임은 일부 가려져 표시됩니다. 개인정보는 입력하지 않도록 주의해 주세요.</p>
             </form>
-            {% else %}
-            <div class="qna-login-notice">
-                <p>로그인 후 상품에 대한 문의를 남길 수 있어요.</p>
-                <a class="btn btn-white" href="{{ url_for('login', next=url_for('product_detail', id=product.id, tab='qna')) }}">로그인하기</a>
-            </div>
             {% endif %}
 
-            <div class="qna-list">
-                {% for q in qna_list %}
-                {% if not q.is_private or (user and (user.username == q.author or user.username == product.seller_id)) %}
-                <div class="qna-item">
-                    <div class="qna-item-head">
+            <div class="qna-list" data-qna-list data-page-size="5">
+                {% for q in qna_list if not q.is_private or (user and (user.username == q.author or user.username == product.seller_id)) %}
+                <details class="qna-row" data-qna-row>
+                    <summary>
                         <span class="status-chip {{ 'done' if q.answer else 'wait' }}">{{ '답변 완료' if q.answer else '답변 대기' }}</span>
+                        <span class="qna-q">{{ q.question }}</span>
+                        <span class="qna-meta">{{ (q.author_name or q.author)|mask_name }} · {{ (q.date or '')[5:10] }}</span>
+                        <span class="qna-arrow" aria-hidden="true">⌄</span>
+                    </summary>
+                    <div class="qna-body">
                         <span class="qna-category">{{ q.category or '기타' }}</span>
-                        {% if q.is_private %}<span class="status-chip off">비공개</span>{% endif %}
-                        <span class="muted small">{{ (q.author_name or q.author)|mask_name }} · {{ q.date }}</span>
+                        {% if q.answer %}
+                        <div class="qna-answer"><b>A.</b><span class="preserve-lines">{{ q.answer }} <span class="muted small">· 진행자 · {{ (q.answer_date or '')[5:10] }}</span></span></div>
+                        {% else %}
+                        <p class="muted small">진행자의 답변을 기다리고 있어요.</p>
+                        {% endif %}
                     </div>
-                    <p class="qna-item-question preserve-lines"><b>Q.</b> {{ q.question }}</p>
-                    {% if q.answer %}
-                    <div class="qna-item-answer">
-                        <div class="qna-answer-head"><strong>진행자 답변</strong><span class="muted small">{{ q.answer_date or '' }}</span></div>
-                        <p class="preserve-lines"><b>A.</b> {{ q.answer }}</p>
-                    </div>
-                    {% else %}
-                    <p class="qna-wait-note muted small">진행자의 답변을 기다리고 있어요.</p>
-                    {% endif %}
-                </div>
-                {% endif %}
+                </details>
                 {% else %}
                 <p class="table-empty">등록된 문의가 아직 없어요. 궁금한 점을 질문해 보세요!</p>
                 {% endfor %}
             </div>
-        </section>
+            <button class="qna-more" type="button" data-qna-more hidden>문의 더보기 ⌄</button>
+        </div>
         {% endif %}
+        </section>
 
         <a class="back-link" href="{{ url_for('view_list') }}">← 상품 목록으로 돌아가기</a>
     </div>

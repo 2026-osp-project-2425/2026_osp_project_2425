@@ -38,45 +38,64 @@
 .detail-rows dd { margin:0; min-width:0; overflow-wrap:anywhere; }
 
 /* 상품 상세 메뉴 */
-.detail-tabs { display:flex; background:#fff; border-radius:14px; padding:0 16px; }
+.detail-card.detail-content-card { padding:0; overflow:hidden; }
+.detail-tabs { display:flex; background:#fff; padding:0 24px; border-bottom:1px solid var(--line); }
 .detail-tab { flex:1; display:flex; align-items:center; justify-content:center; gap:6px; min-height:54px; padding:10px 4px; border-bottom:3px solid transparent; font-size:15px; font-weight:600; color:var(--muted); }
 .detail-tab:hover,.detail-tab.on { color:var(--green); }
 .detail-tab.on { border-bottom-color:var(--green); font-weight:700; }
-.detail-tab span { padding:2px 8px; border-radius:20px; background:#f3f6f4; font-size:12px; color:var(--green); }
+.detail-tab span { font-size:13px; color:var(--green); }
+.detail-tab-content { padding:24px 28px 28px; min-width:0; }
 
-/* Q&A 카드 전용 스타일 */
-.qna-section-head { margin-bottom:18px; }
-.qna-section-head h2 { margin-bottom:6px; }
-.qna-section-head p { margin:0; }
-.qna-stats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin-bottom:20px; }
-.qna-stat { display:flex; flex-direction:column; align-items:center; gap:6px; padding:14px 6px; background:#f3f6f4; border-radius:12px; }
-.qna-stat span { font-size:13px; color:var(--muted); }
-.qna-stat strong { font-size:22px; color:var(--green); }
-.qna-write-form { display:flex; flex-direction:column; gap:12px; margin-bottom:20px; padding:16px; background:#f6f8f7; border-radius:14px; }
-.qna-field { display:flex; flex-direction:column; gap:6px; }
-.qna-field label { font-size:13px; font-weight:700; color:var(--ink); }
-.qna-field select,.qna-write-form textarea { width:100%; box-sizing:border-box; padding:10px 12px; font-size:14px; border:1px solid var(--field-line); border-radius:10px; background:#fff; color:var(--ink); }
-.qna-field select { min-height:42px; }
-.qna-write-form textarea { min-height:100px; resize:vertical; }
-.qna-field select:focus,.qna-write-form textarea:focus { outline:2px solid var(--green); outline-offset:1px; }
-.qna-write-actions { display:flex; justify-content:space-between; align-items:center; gap:10px; }
-.qna-write-actions .btn { min-height:40px; padding:0 16px; font-size:14px; }
-.qna-counter { white-space:nowrap; }
-.qna-write-note { margin:0; line-height:1.6; }
-.qna-login-notice { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px; margin-bottom:20px; padding:16px; background:#f6f8f7; border-radius:14px; }
-.qna-login-notice p { margin:0; font-size:14px; }
-.qna-list { display:flex; flex-direction:column; gap:12px; }
-.qna-item { padding:16px; border:1px solid var(--line); border-radius:12px; display:flex; flex-direction:column; gap:8px; }
-.qna-item-head { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+/* 상품 상세 > 문의 탭 */
+.qna-section { display:flex; flex-direction:column; padding-top:20px; }
+.qna-toolbar { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:12px; padding-bottom:12px; }
+.qna-summary { font-size:14px; color:var(--muted); }
+.qna-summary b { color:var(--ink); }
+.qna-summary .wait-text { color:#8a5a00; }
+.qna-open-btn,.qna-submit { display:inline-flex; align-items:center; justify-content:center; min-height:44px; padding:0 18px; border:1px solid transparent; border-radius:12px; background:var(--green); color:#fff; font:inherit; font-size:14px; font-weight:700; cursor:pointer; }
+.qna-open-btn:hover,.qna-submit:hover { background:var(--green-dark,var(--green)); color:#fff; }
+.qna-open-btn[aria-expanded="true"] { background:#fff; color:var(--ink); border-color:var(--field-line); }
+
+/* 문의 작성 폼 */
+.qna-write-form { display:flex; flex-direction:column; gap:14px; margin-bottom:16px; padding:20px; border:1.5px solid var(--green); border-radius:16px; background:#fbfdfc; }
+.qna-write-form[hidden] { display:none; }
+.qna-write-title { font-size:17px; }
+.qna-types { display:flex; flex-wrap:wrap; gap:6px; margin:0; padding:0; border:0; min-width:0; }
+.qna-types legend { width:100%; margin-bottom:8px; padding:0; font-size:14px; font-weight:700; }
+.qna-type { position:relative; }
+.qna-type input { position:absolute; opacity:0; width:1px; height:1px; }
+.qna-type span { display:inline-flex; align-items:center; min-height:36px; padding:0 14px; border:1px solid var(--field-line); border-radius:999px; background:#fff; font-size:13px; font-weight:700; cursor:pointer; }
+.qna-type input:checked + span { background:var(--ink); border-color:var(--ink); color:#fff; }
+.qna-type input:focus-visible + span { outline:2px solid var(--green); outline-offset:2px; }
+.qna-field { display:flex; flex-direction:column; gap:8px; }
+.qna-field label { font-size:14px; font-weight:700; color:var(--ink); }
+.qna-write-form textarea { width:100%; box-sizing:border-box; min-height:110px; padding:12px 14px; font:inherit; font-size:15px; border:1px solid var(--field-line); border-radius:12px; background:#fff; color:var(--ink); resize:vertical; }
+.qna-write-form textarea:focus { outline:2px solid var(--green); outline-offset:1px; }
+.qna-counter { align-self:flex-end; font-size:12px; color:var(--muted); }
+.qna-write-actions { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:12px; }
+.qna-write-actions > span { flex:1 1 200px; line-height:1.6; }
+.qna-submit { min-height:44px; padding:0 24px; font-size:14px; }
+
+/* 문의 목록 */
+.qna-list { display:flex; flex-direction:column; }
+.qna-row { border-top:1px solid var(--line); }
+.qna-row:last-child { border-bottom:1px solid var(--line); }
+.qna-row[hidden] { display:none; }
+.qna-row summary { display:grid; grid-template-columns:auto minmax(0,1fr) auto 16px; gap:12px; align-items:center; padding:14px 4px; font-size:14px; cursor:pointer; list-style:none; }
+.qna-row summary::-webkit-details-marker { display:none; }
+.qna-q { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.qna-row[open] .qna-q { font-weight:700; white-space:pre-wrap; overflow-wrap:anywhere; }
+.qna-meta { font-size:12px; color:var(--muted); white-space:nowrap; }
+.qna-arrow { color:#9a9ea1; text-align:center; transition:transform .15s; }
+.qna-row[open] .qna-arrow { transform:rotate(180deg); color:var(--green); }
+.qna-body { display:flex; flex-direction:column; align-items:flex-start; gap:8px; padding:0 4px 14px; font-size:14px; }
+.qna-body p { margin:0; line-height:1.6; overflow-wrap:anywhere; }
 .qna-category { padding:3px 8px; background:#f3f6f4; color:var(--green); border-radius:20px; font-size:12px; font-weight:600; }
-.qna-item-question { margin:0; font-size:14px; color:var(--ink); line-height:1.6; overflow-wrap:anywhere; }
-.qna-item-question b { color:var(--green); }
-.qna-item-answer { margin-top:4px; padding:12px 14px; background:#f3f6f4; border-radius:10px; font-size:13px; color:var(--ink); }
-.qna-answer-head { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:6px; margin-bottom:8px; }
-.qna-answer-head strong { color:var(--green); }
-.qna-item-answer p { margin:0; line-height:1.6; overflow-wrap:anywhere; }
-.qna-item-answer b { color:var(--green); }
-.qna-wait-note { margin:0; }
+.qna-answer { display:flex; gap:10px; width:100%; box-sizing:border-box; padding:12px 14px; border-radius:12px; background:#f3f6f4; line-height:1.6; overflow-wrap:anywhere; }
+.qna-answer > b { flex-shrink:0; color:var(--green); }
+.qna-answer > span { min-width:0; }
+.qna-more { align-self:center; min-height:40px; margin-top:10px; padding:0 12px; border:0; background:none; color:var(--green); font:inherit; font-size:14px; font-weight:700; cursor:pointer; }
+.qna-more[hidden] { display:none; }
 
 .option-panel { flex: 1 1 280px; max-width:320px; position: sticky; top: 24px; height: fit-content; background:var(--green); color:#fff; border-radius:20px; padding:26px; display:flex; flex-direction:column; gap:20px; }
 .option-panel h2 { font-size:18px; }
@@ -107,8 +126,25 @@
 .option-note { margin:0; font-size:12px; color:#d3e6de; }
 
 @media(max-width:1200px) { .option-panel { max-width:none; } }
-@media(max-width:900px) { 
-    .option-panel { max-width:none; position:static; width:100%; } 
+@media(max-width:900px) {
+    .option-panel { max-width:none; position:static; width:100%; }
 }
-@media(max-width:480px) { .pickup-grid { grid-template-columns:minmax(0,1fr); } .detail-rows>div { grid-template-columns:88px minmax(0,1fr); gap:12px; } }
+@media(max-width:480px) {
+    .pickup-grid { grid-template-columns:minmax(0,1fr); }
+    .detail-rows>div { grid-template-columns:88px minmax(0,1fr); gap:12px; }
+    .detail-tabs { padding:0 12px; }
+    .detail-tab { font-size:14px; }
+    .detail-tab-content { padding:18px 16px 20px; }
+    .qna-toolbar { gap:8px; }
+    .qna-summary { font-size:13px; }
+    .qna-open-btn { min-height:38px; padding:0 12px; font-size:13px; }
+    .qna-write-form { padding:14px; }
+    .qna-type span { min-height:32px; padding:0 10px; font-size:12px; }
+    .qna-row summary { grid-template-columns:auto minmax(0,1fr) 16px; gap:8px; }
+    .qna-row summary .status-chip { grid-column:1; grid-row:1; }
+    .qna-meta { grid-column:2; grid-row:1; text-align:right; }
+    .qna-arrow { grid-column:3; grid-row:1; }
+    .qna-q { grid-column:1/-1; grid-row:2; }
+    .qna-submit { margin-left:auto; }
+}
 .option-buy:disabled { opacity:.65; filter:none; }

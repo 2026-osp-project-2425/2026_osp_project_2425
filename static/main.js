@@ -732,3 +732,35 @@ document.querySelectorAll("button.review-like-small").forEach((button) => {
 
     loadLikeState();
 });
+
+// 상품 상세 > 문의 작성 폼 열기 및 닫기
+document.querySelectorAll('[data-qna-toggle]').forEach((button) => {
+    const form = document.getElementById(button.getAttribute('aria-controls'));
+    if (!form) return;
+    button.addEventListener('click', () => {
+        const open = form.hidden;
+        form.hidden = !open;
+        button.setAttribute('aria-expanded', String(open));
+        button.textContent = open ? '작성 취소' : '✎ 문의하기';
+        if (open) form.querySelector('textarea').focus();
+    });
+});
+
+// 상품 상세 > 문의 더보기
+document.querySelectorAll('[data-qna-list]').forEach((list) => {
+    const rows = [...list.querySelectorAll('[data-qna-row]')];
+    const more = list.parentElement.querySelector('[data-qna-more]');
+    const size = Number(list.dataset.pageSize) || 5;
+    let shown = 0;
+    const showMore = () => {
+        shown += size;
+        rows.forEach((row, index) => { row.hidden = index >= shown; });
+        if (more) more.hidden = shown >= rows.length;
+    };
+    if (more) more.addEventListener('click', showMore);
+    showMore();
+
+    // 첫 번째 답변 완료 문의 자동 펼치기
+    const firstAnswered = rows.find((row) => !row.hidden && row.querySelector('.status-chip.done'));
+    if (firstAnswered) firstAnswered.open = true;
+});

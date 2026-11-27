@@ -1,4 +1,4 @@
-"""Firebase is the shared source for products, accounts and practice images."""
+"""Firebase is the shared source for products, accounts and shared images."""
 import base64
 from datetime import datetime, timezone
 from functools import wraps

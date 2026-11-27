@@ -1,4 +1,4 @@
-"""Open Software Platform Flask practice. Run: python app.py"""
+"""EwhaMarket Flask application. Run: python app.py"""
 from flask import jsonify
 import csv
 import io
@@ -1003,7 +1003,7 @@ def participate():
     if single_id:
         return redirect(url_for("order_done", order_id=order_id))
     session["cart"] = []
-    flash(f"{len(entries)}개 상품의 공동구매 참여가 확정되었습니다. 실제 결제는 진행되지 않습니다.", "success")
+    flash(f"{len(entries)}개 상품의 공동구매 참여가 확정되었습니다.", "success")
     return redirect(url_for("account"))
 
 @app.route("/order_done/<order_id>")

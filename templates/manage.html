@@ -79,7 +79,6 @@
                 {% if options %}<tfoot><tr><th scope="row">합계</th><td>{{ orders|length }}건</td><td>{{ quantity }}개</td><td>{{ (product.price|int * quantity)|won }}원</td></tr></tfoot>{% endif %}
             </table>
             </div>
-            <p class="manage-hint">실습에서는 실제 결제와 정산이 진행되지 않습니다.</p>
         {% elif tab == 'reviews' %}
             <div class="panel-row"><h2 class="panel-title">리뷰 <span>({{ reviews|length }})</span></h2>{% if reviews %}<a class="line-btn" href="{{ url_for('view_review', product_id=product.id) }}">리뷰 목록 보기 →</a>{% endif %}</div>
             {% for r in reviews %}

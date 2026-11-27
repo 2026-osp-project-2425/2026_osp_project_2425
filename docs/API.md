@@ -56,6 +56,7 @@ Flask가 HTML 페이지와 API를 같은 서버에서 제공합니다. 경로의
 | POST | `/cart/remove` | `index` (0부터 시작) | 장바구니로 이동 |
 | POST | `/participate` | 단일 참여는 `product_id`, 옵션, `quantity`. 상품 ID 생략 시 장바구니 전체 | 로그인 필요. 참여 저장 후 완료 또는 마이페이지로 이동 |
 | GET | `/order_done/<order_id>` | — | 주문 소유자의 참여 완료 화면 |
+| POST | `/joined/<order_id>/receipt` | — | 주문 소유자 전용. 목표를 달성해 마감되고, 수령 일정이 있으면 해당 시각이 지난 뒤 본인 수령을 확인. 참여 상세로 이동 |
 | GET | `/joined/<order_id>` | 쿼리 `tab=notice\|people\|contact` | 주문 소유자의 참여 상세 |
 
 수량은 기본 1이며 1~99 범위로 제한합니다. 기타 옵션을 설정한 상품은 `custom_option` 값이 필수입니다. 선택값은 Firebase 주문에 저장합니다. 장바구니에서 참여할 때도 최신 선택지와 일치하는지 검사합니다.
@@ -66,7 +67,7 @@ Flask가 HTML 페이지와 API를 같은 서버에서 제공합니다. 경로의
 | --- | --- | --- | --- |
 | GET | `/review` | 쿼리 `product_id`, `sort=latest\|rating\|photo`, `page` | 공개 리뷰 목록 |
 | GET | `/reviews/<id>`, `/review_detail?id=<id>` | 리뷰 ID | 공개 리뷰 상세 |
-| GET / POST | `/reg_reviews` | 쿼리 또는 폼 `product_id`. POST `title`, `description`, `rating`(1~5), `file_input` | 참여자 전용. 상품 선택은 상품당 한 번 표시하고 최근 주문의 옵션을 사용. 성공 시 상세로 이동 |
+| GET / POST | `/reg_reviews` | 쿼리 또는 폼 `product_id`. POST `title`, `description`, `rating`(1~5), `file_input` | 목표를 달성해 마감된 상품의 수령을 확인한 참여자 전용. 상품 선택은 상품당 한 번 표시하고 수령을 확인한 최근 주문의 옵션을 사용. 성공 시 상세로 이동 |
 | GET / POST | `/reviews/<id>/edit` | POST `title`, `description`, `rating`, 선택 사진 | 리뷰 작성자 전용. 수정 폼 또는 상세로 이동 |
 | GET / POST | `/review_like/<review_id>` | POST JSON `{"liked":true}` 또는 `{"liked":false}` | 로그인 필요. JSON `{"liked":true}` 형태. 잘못된 값 `400`, 비로그인 `401`, 없는 리뷰 `404`, 저장소 장애 `503` |
 
@@ -90,7 +91,7 @@ Flask가 HTML 페이지와 API를 같은 서버에서 제공합니다. 경로의
 | PUT | `/api/drafts/<kind>` | `200`. 해당 종류를 한 건으로 저장하고 `draft` 객체 반환 |
 | DELETE | `/api/drafts/<kind>` | `204`. 선택 쿼리 `version`을 지정하면 해당 버전만 삭제하며, 다른 버전으로 바뀐 경우 `409` |
 
-상품 PUT은 상품 폼의 텍스트·숫자·체크박스 필드를 받습니다. 판매자 ID, 계산된 목표 금액과 사진은 제외합니다. 리뷰 PUT은 참여한 상품의 `product_id`와 선택 필드 `title`, `description`, `rating`을 받습니다. 요청은 최대 32 KiB입니다.
+상품 PUT은 상품 폼의 텍스트·숫자·체크박스 필드를 받습니다. 판매자 ID, 계산된 목표 금액과 사진은 제외합니다. 리뷰 PUT은 수령을 확인한 상품의 `product_id`와 선택 필드 `title`, `description`, `rating`을 받습니다. 요청은 최대 32 KiB입니다.
 
 ```json
 {

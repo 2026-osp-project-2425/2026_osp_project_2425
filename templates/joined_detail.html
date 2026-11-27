@@ -55,7 +55,12 @@
             <div><dt>수령 장소</dt><dd>{{ product.address }}</dd></div>
         </dl>
         {% if review %}<a class="line-btn align-end" href="{{ url_for('review_detail', id=review.id) }}">☆ 내 리뷰 보기</a>
-        {% elif f.received %}<a class="fill-btn align-end" href="{{ url_for('reg_review', product_id=product.id) }}">리뷰 작성하기</a>{% endif %}
+        {% elif received %}<a class="fill-btn align-end" href="{{ url_for('reg_review', product_id=product.id) }}">리뷰 작성하기</a>{% endif %}
+        {% if f.received and not received %}
+        <form method="post" action="{{ url_for('confirm_receipt', order_id=order.id) }}">
+            <button class="fill-btn align-end" type="submit">상품 수령 확인</button>
+        </form>
+        {% endif %}
     </section>
 
     <section class="panel">

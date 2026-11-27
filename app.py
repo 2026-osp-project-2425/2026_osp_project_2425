@@ -45,6 +45,7 @@ HEX_PATTERN = r"#[0-9a-fA-F]{6}"
 LIST_SORTS = {"popular": "인기순", "latest": "최신순", "reviews": "리뷰 많은 순", "rating": "평점순"}
 QNA_CATEGORIES = ["사이즈·옵션", "수령·배송", "결제", "기타"]
 QNA_MAX_LENGTH = 300
+REVIEW_RECEIPT_REQUIRED = "공동구매가 마감되고 상품 수령을 확인한 뒤 리뷰를 작성할 수 있습니다."
 
 MANAGE_TABS = {
     "info": "상품 정보",
@@ -312,7 +313,11 @@ def funding(product):
         pickup=f"{pickup:%Y.%m.%d}" if pickup else "",
     )
 
-def stages(product, last_step, finished=False):
+def review_ready(product, order):
+    return bool(order.get("received_at")) and funding(product)["received"]
+
+
+def stages(product, last_step, finished=False, received=None):
     """진행 단계 표시용. 배송 정보는 따로 저장하지 않으므로 수령 일시를 기준으로 나눈다."""
     state = funding(product)
     if state["cancelled"]:
@@ -320,15 +325,16 @@ def stages(product, last_step, finished=False):
     start = parse_datetime(product.get("start_date"), "%Y-%m-%d")
     end = parse_datetime(product.get("end_date"), "%Y-%m-%d")
     pickup = parse_pickup(product.get("pickup_datetime"))
+    received = state["received"] if received is None else received
     planned = "" if state["closed"] else " 예정"
     steps = [
         ("상품 등록", f"{start:%m.%d}" if start else ""),
         ("모집 진행", f"{start:%m.%d}~{end:%m.%d}" if start and end else (f"~{end:%m.%d}" if end else "")),
         ("구매 확정", f"{end + timedelta(days=1):%m.%d}{planned}" if end else ""),
-        ("수령", f"{pickup:%m.%d}{'' if state['received'] else ' 예정'}" if pickup else "일정 미정"),
+        ("수령", f"{pickup:%m.%d}{'' if received else ' 예정'}" if pickup else "일정 미정"),
         last_step,
     ]
-    current = 1 if not state["closed"] else 3 if not state["received"] else 5 if finished else 4
+    current = 1 if not state["closed"] else 3 if not received else 5 if finished else 4
     return [dict(label=label, note=note, state="done" if index < current else "cur" if index == current else "") for index, (label, note) in enumerate(steps)]
 
 def review_stats(reviews):
@@ -417,8 +423,12 @@ def draft(kind):
         if kind == "review":
             if not isinstance(product_id, str) or not DB.valid_key(product_id):
                 return jsonify(error="리뷰 상품을 선택해 주십시오."), 400
-            if latest_order(product_id) is None:
-                return jsonify(error="참여한 상품의 리뷰만 임시저장할 수 있습니다."), 403
+            product = next((item for item in shared_products() if item["id"] == product_id), None)
+            if product is None:
+                return jsonify(error="상품을 찾을 수 없습니다."), 404
+            orders = order_rows(product_id=product_id, username=username)
+            if not any(review_ready(product, order) for order in orders):
+                return jsonify(error=REVIEW_RECEIPT_REQUIRED), 403
         endpoint = "reg_item" if kind == "product" else "reg_review"
         resume_url = url_for(endpoint, product_id=product_id)
         return jsonify(draft=DB.save_draft(username, kind, data, resume_url))
@@ -679,10 +689,11 @@ def view_review():
     average = sum(r["rating"] for r in reviews) / review_count if reviews else 0
     distribution = [(score, sum(r["rating"] == score for r in reviews)) for score in range(5, 0, -1)]
 
-    # 공동구매 참여 여부 및 본인 리뷰 확인
-    joined = bool(product and latest_order(product_id))
     username = session["user"]["username"] if session.get("user") else None
-    my_review = next((r for r in reviews if r.get("author") == username), None) if joined else None
+    orders = order_rows(product_id=product_id, username=username) if product and username else []
+    can_review = any(review_ready(product, order) for order in orders)
+    my_review = next((r for r in reviews if r.get("author") == username), None) if orders else None
+    pending_order = orders[0] if orders and funding(product)["received"] and not can_review else None
 
     sort = request.args.get("sort", "latest")
     if sort == "rating":
@@ -692,7 +703,7 @@ def view_review():
     products = {p["id"]: p for p in records("products")}
     pages = max(1, math.ceil(len(reviews) / 4))
     number = min(max(request.args.get("page", 1, type=int), 1), pages)
-    return page("review_list.html", "리뷰 목록", "review", reviews=reviews[(number-1)*4:number*4], listed_count=len(reviews), products=products, product=product, review_count=review_count, average=average, distribution=distribution, sort=sort, current_page=number, pages=pages, product_id=product_id, joined=joined, my_review=my_review)
+    return page("review_list.html", "리뷰 목록", "review", reviews=reviews[(number-1)*4:number*4], listed_count=len(reviews), products=products, product=product, review_count=review_count, average=average, distribution=distribution, sort=sort, current_page=number, pages=pages, product_id=product_id, joined=bool(orders), can_review=can_review, my_review=my_review, pending_order=pending_order, receipt_required=REVIEW_RECEIPT_REQUIRED)
 
 @app.route("/review_detail")
 @app.route("/reviews/<id>")
@@ -714,18 +725,6 @@ def review_detail(id=None):
         review=review,
         product=product_by_id(review["product_id"])
     )
-def latest_order(product_id):
-    if not session.get("user"):
-        return None
-    return next(
-        iter(order_rows(
-            product_id=product_id,
-            username=session["user"]["username"]
-        )),
-        None
-    )
-
-
 @app.route("/reg_reviews", methods=["GET", "POST"])
 def reg_review():
     if not session.get("user"):
@@ -735,37 +734,35 @@ def reg_review():
     username = session["user"]["username"]
     products = {p["id"]: p for p in records("products")}
 
-    joined_orders = order_rows(username=username)
-    orders_by_product = {}
-    for order in joined_orders:
-        if order["product_id"] in products:
-            orders_by_product.setdefault(order["product_id"], order)
-    joined_items = [
-        dict(order=order, product=products[product_id])
-        for product_id, order in orders_by_product.items()
-    ]
+    eligible_orders = {}
+    joined_ids = set()
+    for order in order_rows(username=username):
+        product_id = order["product_id"]
+        joined_ids.add(product_id)
+        if product_id in products and review_ready(products[product_id], order):
+            eligible_orders.setdefault(product_id, order)
 
     product_id = request.values.get("product_id")
-    if product_id and product_id not in products:
-        abort(404)
-    if product_id and product_id not in orders_by_product:
-        abort(403, description="공동구매에 참여한 상품만 리뷰를 작성할 수 있습니다.")
+    if product_id:
+        if product_id not in products:
+            abort(404)
+        if product_id not in joined_ids:
+            abort(403, description="공동구매에 참여한 상품만 리뷰를 작성할 수 있습니다.")
+        if product_id not in eligible_orders:
+            abort(403, description=REVIEW_RECEIPT_REQUIRED)
 
-    if not joined_items:
+    if not eligible_orders:
         if request.method == "POST":
-            abort(403)
-        return page(
-            "review_writing.html",
-            "리뷰 작성",
-            "writing",
-            joined_items=[],
-            product=None,
-            order=None
-        )
+            abort(403, description=REVIEW_RECEIPT_REQUIRED)
+        return page("review_writing.html", "리뷰 작성", "writing", product=None,
+                    receipt_required=REVIEW_RECEIPT_REQUIRED)
 
-    product_id = product_id or joined_items[0]["product"]["id"]
-    order = orders_by_product[product_id]
-
+    joined_items = [
+        dict(order=order, product=products[eligible_id])
+        for eligible_id, order in eligible_orders.items()
+    ]
+    product_id = product_id or next(iter(eligible_orders))
+    order = eligible_orders[product_id]
     product = products[product_id]
 
     if request.method == "POST":
@@ -1015,6 +1012,22 @@ def order_done(order_id):
                 product=product,
                 buyer_chat_url=buyer_chat_url, **product_detail_context(product))
 
+@app.post("/joined/<order_id>/receipt")
+def confirm_receipt(order_id):
+    if not session.get("user"):
+        return redirect(url_for("login", next=url_for("joined_detail", order_id=order_id)))
+    order = my_order(order_id)
+    product = product_by_id(order["product_id"])
+    if not funding(product)["received"]:
+        abort(403, description="공동구매 마감과 수령 예정 일시 이후에 수령을 확인할 수 있습니다.")
+    try:
+        DB.confirm_order_receipt(order["id"], order["username"])
+    except ValueError:
+        abort(404)
+    flash("상품 수령을 확인했습니다.", "success")
+    return redirect(url_for("joined_detail", order_id=order_id))
+
+
 @app.route("/joined/<order_id>")
 def joined_detail(order_id):
     order = my_order(order_id)
@@ -1022,10 +1035,11 @@ def joined_detail(order_id):
     state = funding(product)
     review = next((r for r in records("reviews") if r["product_id"] == product["id"] and r["author"] == order["username"]), None)
     tab = request.args.get("tab") if request.args.get("tab") in ("people", "contact") else "notice"
+    received = review_ready(product, order)
     title = "진행 중 상품 상세" if not state["closed"] else "참여 상품 상세"
     _, buyer_chat_url = chat_links(product)
     return page("joined_detail.html", title, "account", order=order,
-                product=product, buyer_chat_url=buyer_chat_url, state=state, review=review, tab=tab, steps=stages(product, ("리뷰 작성", "수령 후"), finished=bool(review)), options=option_summary(order_rows(product_id=product["id"])), **product_detail_context(product))
+                product=product, buyer_chat_url=buyer_chat_url, state=state, received=received, review=review, tab=tab, steps=stages(product, ("리뷰 작성", "수령 후"), finished=bool(review), received=received), options=option_summary(order_rows(product_id=product["id"])), **product_detail_context(product))
 
 @app.route("/signup", methods=["GET", "POST"])
 def signup():

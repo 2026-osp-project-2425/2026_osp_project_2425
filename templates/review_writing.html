@@ -7,9 +7,9 @@
     {% if not product %}
     <section class="white-card empty-state">
         <p>아직 리뷰를 작성할 수 있는 상품이 없습니다.</p>
-        <p class="muted small">공동구매에 참여한 상품만 리뷰를 작성할 수 있습니다.</p>
-        <a class="btn" href="{{ url_for('view_list') }}">
-            진행 중인 공동구매 보기
+        <p class="muted small">{{ receipt_required }}</p>
+        <a class="btn" href="{{ url_for('account') }}">
+            참여 내역 보기
         </a>
     </section>
     {% else %}

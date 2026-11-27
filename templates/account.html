@@ -40,7 +40,7 @@
                 <div class="order-body">
                     <div>{% if not f.closed %}<span class="status-chip active">{{ dday_text(f) }}</span>
                     {%- elif f.cancelled %}<span class="status-chip off">목표 미달 · 공동구매 취소</span>
-                    {%- elif f.received and not e.review %}<span class="status-chip wait">구매 확정 · 리뷰 작성 대기</span>
+                    {%- elif f.received and e.received_at and not e.review %}<span class="status-chip wait">구매 확정 · 리뷰 작성 대기</span>
                     {%- else %}<span class="status-chip done">구매 확정</span>{% endif %}</div>
                     <b class="order-name">{{ e.product.name }}</b>
                     <span class="order-meta">{% if e|option %}{{ e|option }} · {% endif %}{{ e.quantity }}개 · {{ e.created_at }} 참여</span>
@@ -50,10 +50,11 @@
                     {% if f.target %}<span><b>{{ f.progress }}%</b> · {{ f.participants }} / {{ f.target }}명</span><progress value="{{ f.progress }}" max="100" aria-label="공동구매 진행률">{{ f.progress }}%</progress>{% else %}<span>{{ f.participants }}명 참여</span>{% endif %}
                 </div>
                 {% elif f.cancelled %}<span class="order-state">목표 인원 미달</span>
-                {% elif f.received %}<span class="order-state">수령 완료{% if f.pickup %} ({{ f.pickup }}){% endif %}</span>
-                {% else %}<span class="order-state">수령 예정 ({{ f.pickup }})</span>{% endif %}
+                {% elif f.received and e.received_at %}<span class="order-state">수령 완료</span>
+                {% elif f.received %}<span class="order-state">수령 확인 대기</span>
+                {% else %}<span class="order-state">수령 예정{% if f.pickup %} ({{ f.pickup }}){% endif %}</span>{% endif %}
                 {% if e.review %}<a class="line-btn" href="{{ url_for('review_detail', id=e.review.id) }}">☆ 내 리뷰 보기</a>
-                {% elif f.received %}<a class="fill-btn" href="{{ url_for('reg_review', product_id=e.product.id) }}">리뷰 작성하기</a>
+                {% elif f.received and e.received_at %}<a class="fill-btn" href="{{ url_for('reg_review', product_id=e.product.id) }}">리뷰 작성하기</a>
                 {% else %}<a class="line-btn" href="{{ url_for('joined_detail', order_id=e.id) }}">상세보기 ›</a>{% endif %}
                 <a class="order-chevron" href="{{ url_for('joined_detail', order_id=e.id) }}" aria-label="{{ e.product.name }} 참여 상세">›</a>
             </article>

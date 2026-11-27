@@ -91,6 +91,10 @@ class DBhandler:
         product.setdefault("participants", 0)
         for field in ("images", "sizes", "colors", "custom_options", "notices"):
             product[field] = product.get(field) or []
+        if isinstance(product["custom_options"], str):
+            product["custom_options"] = [
+                value.strip() for value in product["custom_options"].splitlines() if value.strip()
+            ]
         return product
 
     @shared_operation
@@ -351,6 +355,20 @@ class DBhandler:
     def validate_username(username):
         if not re.fullmatch(r"[A-Za-z0-9_]{3,30}", username):
             raise ValueError("ID는 영문, 숫자, 밑줄을 사용해 3~30자로 입력해 주세요.")
+
+    @shared_operation
+    def get_draft(self, username, kind):
+        return self.ref("draft").child(username).child(kind).get()
+
+    @shared_operation
+    def save_draft(self, username, kind, data, resume_url):
+        draft = dict(data=data, resume_url=resume_url, updated_at=datetime.now(timezone.utc).isoformat())
+        self.ref("draft").child(username).child(kind).set(draft)
+        return draft
+
+    @shared_operation
+    def delete_draft(self, username, kind):
+        self.ref("draft").child(username).child(kind).delete()
 
     @shared_operation
     def get_user(self, username):

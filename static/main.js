@@ -111,13 +111,6 @@
         });
     });
 
-    document.querySelectorAll('[data-help]').forEach((button) => {
-        button.addEventListener('click', () => {
-            document.getElementById('help-text').textContent = button.dataset.help;
-            document.getElementById('help-dialog').showModal();
-        });
-    });
-
     document.querySelectorAll('[data-check-id]').forEach((button) => {
         const username = document.getElementById('username');
         const message = document.getElementById('id-check-message');

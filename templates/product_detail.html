@@ -145,9 +145,9 @@
         {% if days_left is not none and days_left < 0 %}
         <button class="option-buy" type="button" disabled>공동구매 마감</button>
         {% else %}
-        <button class="option-buy" type="submit" formaction="{{ url_for('participate') }}">구매하기</button>
+        <button class="option-buy" type="submit" formaction="{{ url_for('participate') }}">공동구매 참여하기</button>
         <button class="option-cart" type="submit">장바구니 담기</button>
-        <p class="option-note">{{ '' if user else '공동구매에 참여하려면 로그인해야 합니다. ' }}실습에서는 참여만 기록되고 실제 결제는 진행되지 않습니다.</p>
+        {% if not user %}<p class="option-note">공동구매에 참여하려면 로그인해야 합니다.</p>{% endif %}
         {% endif %}
     </form>
 </div>

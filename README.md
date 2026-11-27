@@ -39,12 +39,18 @@ python app.py
 
 | 저장 위치 | 내용 |
 | --- | --- |
-| Firebase `item/{상품명}` | 상품 정보, 고유 `product_id`, 이미지 경로 |
+| Firebase `item/{상품명}` | 상품 정보, 고유 `product_id`, 이미지 경로, 옵션·공지 |
 | Firebase `user/{사용자ID}` | 회원정보와 비밀번호 해시 |
 | Firebase `product_images/{이미지ID}` | 공유 사진 데이터 |
-| SQLite `instance/market.sqlite3` | 로컬 주문·리뷰 및 이전 데이터의 호환 정보 |
+| Firebase `order/{주문ID}`, `review/{리뷰ID}` | 공동구매 참여 내역과 리뷰 |
+| Firebase `review_likes/{리뷰ID}/{사용자ID}` | 리뷰 좋아요 |
+| Firebase `qna/{상품ID}/{문의ID}` | 상품 문의와 답변 |
+| Firebase `draft/{사용자ID}/{종류}` | 임시저장 API로 저장한 상품 등록·리뷰 양식 |
+| SQLite `instance/market.sqlite3` | 기존 로컬 계정 및 상품 ID 호환 정보 |
 
-상품·회원·사진은 같은 Firebase에 연결한 컴퓨터에서 공유합니다. 주문·리뷰 내역은 각 컴퓨터의 SQLite에 저장합니다. 로그인 상태와 장바구니는 해당 브라우저의 세션에서 관리합니다.
+같은 Firebase에 연결한 컴퓨터에서 상품·회원·사진·주문·리뷰를 공유합니다. 로그인 상태와 장바구니는 브라우저 세션에서 관리합니다. 화면의 임시저장 버튼은 로컬 저장소를 사용합니다.
+
+요청 필드와 응답, 인증 조건은 [API 명세서](docs/API.md)를 참고하세요.
 
 상품은 상품명을 키로 저장하고, 상세 주소에는 별도 고유 ID를 사용합니다. 같은 상품명의 중복 등록은 차단하며, 이름을 변경해도 고유 ID는 유지합니다.
 

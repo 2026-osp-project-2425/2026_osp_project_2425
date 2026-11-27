@@ -8,7 +8,7 @@ import os
 import re
 import secrets
 import sqlite3
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from uuid import uuid4
 
@@ -37,6 +37,11 @@ RATING_LABELS = {5: "아주 만족해요", 4: "만족해요", 3: "보통이에�
 EMAIL_PATTERN = r"[^\s@]+@[^\s@]+\.[^\s@]+"
 CHAT_PATTERN = r"https://open\.kakao\.com/\S+"
 OPTION_CATEGORY = CATEGORIES[0]
+KST = timezone(timedelta(hours=9), "KST")
+DRAFT_FIELDS = {
+    "product": set(LABELS) - {"seller_id", "target_amount"} | {"size_enabled", "color_enabled", "buyer_chat_url"},
+    "review": {"product_id", "title", "description", "rating"},
+}
 HEX_PATTERN = r"#[0-9a-fA-F]{6}"
 LIST_SORTS = {"popular": "인기순", "latest": "최신순", "reviews": "리뷰 많은 순", "rating": "평점순"}
 QNA_CATEGORIES = ["사이즈·옵션", "수령·배송", "결제", "기타"]
@@ -168,7 +173,7 @@ def my_order(order_id):
 
 
 def order_option(order):
-    return " / ".join(value for value in (order.get("color"), order.get("size")) if value)
+    return " / ".join(value for value in (order.get("color"), order.get("size"), order.get("custom_option")) if value)
 
 def option_summary(orders):
     summary = {}
@@ -237,9 +242,29 @@ def parse_datetime(value, pattern):
     except ValueError:
         return None
 
+def parse_pickup(value):
+    pickup = parse_datetime(value, "%Y-%m-%dT%H:%M")
+    if pickup or not value:
+        return pickup
+    match = re.fullmatch(r"(\d{4}-\d{2}-\d{2}) (오전|오후) (0[1-9]|1[0-2]):([0-5]\d)", value)
+    if not match:
+        return None
+    date, period, hour, minute = match.groups()
+    hour = int(hour) % 12 + (12 if period == "오후" else 0)
+    return parse_datetime(f"{date}T{hour:02d}:{minute}", "%Y-%m-%dT%H:%M")
+
+
+def product_for_form(product):
+    pickup = parse_pickup(product.get("pickup_datetime"))
+    if pickup is None:
+        return product
+    period = "오전" if pickup.hour < 12 else "오후"
+    return dict(product, pickup_datetime=f"{pickup:%Y-%m-%d} {period} {pickup:%I:%M}")
+
+
 def days_left(product):
     end = parse_datetime(product.get("end_date"), "%Y-%m-%d")
-    return (end.date() - datetime.now().date()).days if end else None
+    return (end.date() - datetime.now(KST).date()).days if end else None
 
 @app.template_filter("kdate")
 def kdate(value):
@@ -261,7 +286,7 @@ def funding(product):
     participants = product.get("participants", 0)
     closed = left is not None and left < 0
     reached = participants >= target
-    pickup = parse_datetime(product.get("pickup_datetime"), "%Y-%m-%dT%H:%M")
+    pickup = parse_pickup(product.get("pickup_datetime"))
     return dict(
         left=left,
         closed=closed,
@@ -272,7 +297,7 @@ def funding(product):
         confirmed=closed and reached,
         cancelled=closed and not reached,
         # 수령 일시가 없으면 공동구매 확정과 동시에 수령한 것으로 본다.
-        received=closed and reached and (pickup is None or pickup <= datetime.now()),
+        received=closed and reached and (pickup is None or pickup <= datetime.now(KST).replace(tzinfo=None)),
         pickup=f"{pickup:%Y.%m.%d}" if pickup else "",
     )
 
@@ -283,7 +308,7 @@ def stages(product, last_step, finished=False):
         return None
     start = parse_datetime(product.get("start_date"), "%Y-%m-%d")
     end = parse_datetime(product.get("end_date"), "%Y-%m-%d")
-    pickup = parse_datetime(product.get("pickup_datetime"), "%Y-%m-%dT%H:%M")
+    pickup = parse_pickup(product.get("pickup_datetime"))
     planned = "" if state["closed"] else " 예정"
     steps = [
         ("상품 등록", f"{start:%m.%d}" if start else ""),
@@ -314,6 +339,8 @@ def product_list_context():
     if category:
         items = [p for p in items if p.get("category") == category]
     status = "closed" if request.args.get("status") == "closed" else "open"
+    ranking = sorted((p for p in all_products if not funding(p)["closed"]),
+                     key=lambda p: p.get("participants", 0), reverse=True)[:3]
     closed_items = [p for p in items if funding(p)["closed"]]
     open_items = [p for p in items if not funding(p)["closed"]]
     items = closed_items if status == "closed" else open_items
@@ -328,7 +355,7 @@ def product_list_context():
         items.sort(key=lambda p: (stats.get(p["id"], {}).get("average", 0), stats.get(p["id"], {}).get("count", 0)), reverse=True)
     pages = max(1, math.ceil(len(items) / 4))
     number = min(max(request.args.get("page", 1, type=int), 1), pages)
-    return dict(products=items[(number-1)*4:number*4], product_count=len(items), open_count=len(open_items), closed_count=len(closed_items), status=status, review_stats=stats, ranking=sorted(all_products, key=lambda p: p.get("participants", 0), reverse=True)[:3], current_page=number, pages=pages, query=query, category=category, sort=sort, sorts=LIST_SORTS)
+    return dict(products=items[(number-1)*4:number*4], product_count=len(items), open_count=len(open_items), closed_count=len(closed_items), status=status, review_stats=stats, ranking=ranking, current_page=number, pages=pages, query=query, category=category, sort=sort, sorts=LIST_SORTS)
 
 @app.route("/")
 def hello():
@@ -340,7 +367,52 @@ def view_list():
 
 @app.route("/reg_items")
 def reg_item():
+    if not session.get("user"):
+        flash("로그인 후 상품을 등록할 수 있어요.", "error")
+        return redirect(url_for("login", next=url_for("reg_item")))
     return page("product_registration.html", "상품 등록", "registration")
+
+@app.get("/registration")
+def resume_registration():
+    if request.args.get("kind") == "review":
+        return redirect(url_for("reg_review", product_id=request.args.get("product_id")))
+    return redirect(url_for("reg_item"))
+
+
+@app.route("/api/drafts/<kind>", methods=["GET", "PUT", "DELETE"])
+def draft(kind):
+    user = session.get("user")
+    if not user:
+        return jsonify(error="로그인이 필요합니다."), 401
+    fields = DRAFT_FIELDS.get(kind)
+    if fields is None:
+        return jsonify(error="지원하지 않는 임시저장 종류입니다."), 404
+
+    username = user["username"]
+    try:
+        if request.method in ("GET", "HEAD"):
+            return jsonify(draft=DB.get_draft(username, kind))
+        if request.method == "DELETE":
+            DB.delete_draft(username, kind)
+            return "", 204
+
+        data = request.get_json(silent=True)
+        if (not isinstance(data, dict) or not data or set(data) - fields
+                or any(type(value) not in (str, bool, int) for value in data.values())
+                or len(request.get_data()) > 32768):
+            return jsonify(error="임시저장 필드 또는 크기를 확인해 주세요."), 400
+        product_id = data.get("product_id")
+        if kind == "review":
+            if not isinstance(product_id, str) or not DB.valid_key(product_id):
+                return jsonify(error="리뷰 상품을 선택해 주세요."), 400
+            if latest_order(product_id) is None:
+                return jsonify(error="참여한 상품의 리뷰만 임시저장할 수 있어요."), 403
+        endpoint = "reg_item" if kind == "product" else "reg_review"
+        resume_url = url_for(endpoint, product_id=product_id)
+        return jsonify(draft=DB.save_draft(username, kind, data, resume_url))
+    except SharedStoreError:
+        return jsonify(error="Firebase 연결을 확인해 주세요."), 503
+
 
 def option_lines(text):
     # 입력 칸은 한 줄에 옵션 하나씩 담아 보낸다. 빈 줄과 중복은 버린다.
@@ -352,19 +424,25 @@ def option_lines(text):
     return names[:20]
 
 def read_options(data):
-    fashion = data.get("category", OPTION_CATEGORY) == OPTION_CATEGORY
-    sizes = option_lines(data.get("sizes", "")) if fashion and data.get("size_enabled") else []
+    sizes = option_lines(data.get("sizes", "")) if data.get("size_enabled") else []
     colors = []
-    if fashion and data.get("color_enabled"):
+    if data.get("color_enabled"):
         for line in option_lines(data.get("colors", "")):
             name, _, hex_code = line.rpartition("|") if "|" in line else (line, "", "")
             name = name.strip()
             if name and name not in [c["name"] for c in colors]:
                 colors.append(dict(name=name, hex=hex_code if re.fullmatch(HEX_PATTERN, hex_code) else ""))
+    custom_on = data.pop("custom_option_enabled", None)
+    custom_name = data.get("custom_option_name", "").strip()
+    custom_options = option_lines(data.get("custom_options", "")) if custom_on else []
+    if custom_on and (not custom_name or len(custom_name) > 40 or not custom_options):
+        raise ValueError("기타 옵션 이름(40자 이하)과 선택지를 입력해 주세요.")
+    data["custom_option_name"] = custom_name if custom_on else ""
+    data["custom_options"] = custom_options
     data["sizes"], data["colors"] = sizes, colors
-    if fashion and data.get("size_enabled") and not sizes:
+    if data.get("size_enabled") and not sizes:
         raise ValueError("사이즈를 하나 이상 입력하거나 '사이즈 선택 받기'를 꺼 주세요.")
-    if fashion and data.get("color_enabled") and not colors:
+    if data.get("color_enabled") and not colors:
         raise ValueError("색상을 하나 이상 입력하거나 '색상 선택 받기'를 꺼 주세요.")
 
 def chosen_options(product, form):
@@ -374,9 +452,13 @@ def chosen_options(product, form):
         raise ValueError("사이즈를 선택해 주세요.")
     if product.get("colors") and color not in [c["name"] for c in product["colors"]]:
         raise ValueError("색상을 선택해 주세요.")
-    return dict(size=size if product.get("sizes") else "", color=color if product.get("colors") else "")
+    custom = form.get("custom_option", "")
+    if custom and custom not in (product.get("custom_options") or []):
+        raise ValueError("등록된 기타 옵션을 선택해 주세요.")
+    return dict(size=size if product.get("sizes") else "",
+                color=color if product.get("colors") else "", custom_option=custom)
 
-def validate_product(data):
+def validate_product(data, existing=None):
     data["name"] = DB.validate_item_name(data.get("name", ""))
     read_options(data)
     for key in ("name", "seller_id", "price", "address", "status", "email"):
@@ -391,12 +473,33 @@ def validate_product(data):
     if not re.fullmatch(EMAIL_PATTERN, data["email"]):
         raise ValueError("이메일 형식을 확인해 주세요.")
     data["chat_url"] = data.get("chat_url", "").strip()
-    if data["chat_url"] and not re.fullmatch(CHAT_PATTERN, data["chat_url"]):
-        raise ValueError("오픈채팅 링크는 https://open.kakao.com/ 으로 시작하는 주소로 입력해 주세요.")
+    if not data["chat_url"] and (existing is None or existing.get("chat_url")):
+        raise ValueError("문의 오픈채팅 링크를 입력해 주세요.")
+    for field in ("chat_url", "buyer_chat_url"):
+        if field not in data:
+            continue
+        data[field] = data[field].strip()
+        if data[field] and not re.fullmatch(CHAT_PATTERN, data[field]):
+            raise ValueError("오픈채팅 링크는 https://open.kakao.com/ 으로 시작하는 주소로 입력해 주세요.")
     if data.get("target_count") and (not data["target_count"].isdigit() or int(data["target_count"]) < 1):
         raise ValueError(f"{LABELS['target_count']}를 확인해 주세요.")
-    if data.get("start_date") and data.get("end_date") and data["end_date"] < data["start_date"]:
+    start = parse_datetime(data.get("start_date"), "%Y-%m-%d")
+    end = parse_datetime(data.get("end_date"), "%Y-%m-%d")
+    if not start or not end:
+        raise ValueError("시작일과 종료일을 올바르게 입력해 주세요.")
+    if start.date() < datetime.now(KST).date() and (
+        existing is None or start != parse_datetime(existing.get("start_date"), "%Y-%m-%d")
+    ):
+        raise ValueError("시작일은 오늘 이후로 지정해 주세요.")
+    if end < start:
         raise ValueError("종료일은 시작일 이후로 지정해 주세요.")
+    if data.get("pickup_datetime"):
+        pickup = parse_pickup(data["pickup_datetime"])
+        if not pickup or pickup.date() < end.date():
+            raise ValueError("수령 일시는 종료일 이후로 올바르게 지정해 주세요.")
+        data["pickup_datetime"] = pickup.isoformat(timespec="minutes")
+    data["start_date"] = start.date().isoformat()
+    data["end_date"] = end.date().isoformat()
     data["target_amount"] = str(int(data["price"]) * int(data["target_count"])) if data.get("target_count") else ""
     # 켜짐 여부는 다시 그릴 때만 쓰므로 검사가 끝나면 저장하지 않는다.
     data.pop("size_enabled", None)
@@ -405,6 +508,7 @@ def validate_product(data):
 @app.route("/submit_item_post", methods=["POST"])
 def reg_item_submit_post():
     if not session.get("user"):
+        flash("로그인 후 상품을 등록할 수 있어요.", "error")
         return redirect(url_for("login", next=url_for("reg_item")))
     data = request.form.to_dict()
     data["seller_id"] = session["user"]["username"]
@@ -427,11 +531,11 @@ def edit_item(product_id):
     if request.method == "POST":
         data = dict(request.form.to_dict(), seller_id=product["seller_id"])
         try:
-            validate_product(data)
+            validate_product(data, existing=product)
             image, _ = image_upload()
         except ValueError as error:
             flash(str(error), "error")
-            return page("product_registration.html", "상품 정보 수정", "account", product=dict(product, **data)), 400
+            return page("product_registration.html", "상품 정보 수정", "account", product=product_for_form(dict(product, **data))), 400
         product.update(data)
         if image:
             product["image"] = image
@@ -440,17 +544,17 @@ def edit_item(product_id):
             save_product(product)
         except ValueError as error:
             flash(str(error), "error")
-            return page("product_registration.html", "상품 정보 수정", "account", product=product), 400
+            return page("product_registration.html", "상품 정보 수정", "account", product=product_for_form(product)), 400
         except Exception:
             app.logger.exception("Firebase product update failed")
             return page("error.html", "저장 실패", message="Firebase 연결을 확인하고 다시 시도해 주세요."), 503
         flash("상품 정보를 수정했습니다.", "success")
         return redirect(url_for("manage", product_id=product_id, tab="info"))
-    return page("product_registration.html", "상품 정보 수정", "account", product=product)
+    return page("product_registration.html", "상품 정보 수정", "account", product=product_for_form(product))
 
 def product_detail_context(product):
     end = parse_datetime(product.get("end_date"), "%Y-%m-%d")
-    pickup = parse_datetime(product.get("pickup_datetime"), "%Y-%m-%dT%H:%M")
+    pickup = parse_pickup(product.get("pickup_datetime"))
     state = funding(product)
     return dict(
         days_left=state["left"],
@@ -477,6 +581,7 @@ def product_detail(id):
         "list",
         product=product,
         tab=tab,
+        inquiry_chat_url=product.get("chat_url", ""),
         qna_list=qna_list,
         qna_answered=sum(1 for q in qna_list if q.get("answer")),
         qna_waiting=sum(1 for q in qna_list if not q.get("answer")),
@@ -601,11 +706,20 @@ def reg_review():
     products = {p["id"]: p for p in records("products")}
 
     joined_orders = order_rows(username=username)
+    orders_by_product = {}
+    for order in joined_orders:
+        if order["product_id"] in products:
+            orders_by_product.setdefault(order["product_id"], order)
     joined_items = [
-        dict(order=o, product=products[o["product_id"]])
-        for o in joined_orders
-        if o["product_id"] in products
+        dict(order=order, product=products[product_id])
+        for product_id, order in orders_by_product.items()
     ]
+
+    product_id = request.values.get("product_id")
+    if product_id and product_id not in products:
+        abort(404)
+    if product_id and product_id not in orders_by_product:
+        abort(403, description="공동구매에 참여한 상품만 리뷰를 작성할 수 있어요.")
 
     if not joined_items:
         if request.method == "POST":
@@ -619,20 +733,8 @@ def reg_review():
             order=None
         )
 
-    product_id = request.values.get("product_id")
-    if not product_id:
-        product_id = joined_items[0]["product"]["id"]
-
-    if product_id not in products:
-        abort(404)
-
-    order = next(
-        (o for o in joined_orders if o["product_id"] == product_id),
-        None
-    )
-
-    if order is None:
-        abort(403)
+    product_id = product_id or joined_items[0]["product"]["id"]
+    order = orders_by_product[product_id]
 
     product = products[product_id]
 
@@ -664,7 +766,8 @@ def reg_review():
                     date=datetime.now().strftime("%Y.%m.%d"),
                     image=image,
                     size=order["size"],
-                    color=order["color"]
+                    color=order["color"],
+                    custom_option=order.get("custom_option", "")
                 )
                 review_id = DB.insert_review(data)
                 flash("리뷰가 등록되었습니다.", "success")
@@ -797,7 +900,11 @@ def cart_add():
         return redirect(url_for("product_detail", id=product_id))
     quantity = max(1, min(request.form.get("quantity", 1, type=int), 99))
     entries = session.get("cart", [])
-    match = next((x for x in entries if x["product_id"] == product_id and x["size"] == options["size"] and x["color"] == options["color"]), None)
+    match = next((
+        entry for entry in entries
+        if entry["product_id"] == product_id
+        and all(entry.get(key, "") == value for key, value in options.items())
+    ), None)
     if match:
         match["quantity"] = min(99, match["quantity"] + quantity)
     else:
@@ -847,6 +954,7 @@ def participate():
             name=session["user"]["name"],
             size=entry["size"],
             color=entry["color"],
+            custom_option=entry.get("custom_option", ""),
             quantity=entry["quantity"],
             created_at=datetime.now().strftime("%Y.%m.%d")
         ))
@@ -863,7 +971,10 @@ def participate():
 def order_done(order_id):
     order = my_order(order_id)
     product = product_by_id(order["product_id"])
-    return page("order_done.html", "구매 확정 완료", "", order=order, product=product, **product_detail_context(product))
+    buyer_chat_url = product.get("buyer_chat_url", "")
+    return page("order_done.html", "구매 확정 완료", "", order=order,
+                product=dict(product, chat_url=buyer_chat_url),
+                buyer_chat_url=buyer_chat_url, **product_detail_context(product))
 
 @app.route("/joined/<order_id>")
 def joined_detail(order_id):
@@ -873,7 +984,9 @@ def joined_detail(order_id):
     review = next((r for r in records("reviews") if r["product_id"] == product["id"] and r["author"] == order["username"]), None)
     tab = request.args.get("tab") if request.args.get("tab") in ("people", "contact") else "notice"
     title = "진행 중 상품 상세" if not state["closed"] else "참여 상품 상세"
-    return page("joined_detail.html", title, "account", order=order, product=product, state=state, review=review, tab=tab, steps=stages(product, ("리뷰 작성", "수령 후"), finished=bool(review)), options=option_summary(order_rows(product_id=product["id"])), **product_detail_context(product))
+    buyer_chat_url = product.get("buyer_chat_url", "")
+    return page("joined_detail.html", title, "account", order=order,
+                product=dict(product, chat_url=buyer_chat_url), buyer_chat_url=buyer_chat_url, state=state, review=review, tab=tab, steps=stages(product, ("리뷰 작성", "수령 후"), finished=bool(review)), options=option_summary(order_rows(product_id=product["id"])), **product_detail_context(product))
 
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
@@ -1175,9 +1288,9 @@ def manage_csv(product_id):
     product = owned_product(product_id)
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(["주문 번호", "이름", "아이디", "색상", "사이즈", "수량", "금액", "주문일"])
+    writer.writerow(["주문 번호", "이름", "아이디", "색상", "사이즈", "수량", "금액", "주문일", "기타 옵션"])
     for o in order_rows(product_id=product_id):
-        writer.writerow([spreadsheet_safe(v) for v in (order_number(o), o["name"] or "", o["username"], o["color"] or "", o["size"] or "", o["quantity"], int(product["price"]) * o["quantity"], o["created_at"])])
+        writer.writerow([spreadsheet_safe(v) for v in (order_number(o), o["name"] or "", o["username"], o["color"] or "", o["size"] or "", o["quantity"], int(product["price"]) * o["quantity"], o["created_at"], o.get("custom_option", ""))])
     return Response("﻿" + output.getvalue(), mimetype="text/csv", headers={"Content-Disposition": "attachment; filename=orders.csv"})
 
 @app.errorhandler(SharedStoreError)
@@ -1187,7 +1300,8 @@ def shared_store_unavailable(error):
 
 @app.errorhandler(403)
 def forbidden(error):
-    return page("error.html", "접근할 수 없습니다", message="이 화면은 해당 계정으로 로그인해야 볼 수 있어요."), 403
+    message = error.description if error.description != type(error).description else "이 화면은 해당 계정으로 로그인해야 볼 수 있어요."
+    return page("error.html", "접근할 수 없습니다", message=message), 403
 
 @app.errorhandler(404)
 def not_found(error):

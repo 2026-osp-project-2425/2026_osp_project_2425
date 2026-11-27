@@ -235,6 +235,17 @@ class DBhandler:
         return order_id
 
     @shared_operation
+    def confirm_order_receipt(self, order_id, username):
+        def confirm(current):
+            if not isinstance(current, dict) or current.get("username") != username:
+                raise ValueError("참여 내역이 없습니다.")
+            if current.get("received_at"):
+                return current
+            return dict(current, received_at=datetime.now(timezone.utc).isoformat())
+
+        self.ref("order").child(order_id).transaction(confirm)
+
+    @shared_operation
     def get_orders(self):
         values = self.ref("order").get() or {}
         orders = [

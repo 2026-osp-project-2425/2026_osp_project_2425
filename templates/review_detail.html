@@ -1,7 +1,6 @@
 {% extends "index.html" %}
 {% block content %}
 <section class="green-panel writing-product">
-    <p class="writing-label">이 리뷰가 작성된 상품이에요</p>
     <div class="writing-row">
         <div class="writing-photo">
             {% if product.image %}
@@ -11,7 +10,6 @@
             {% endif %}
         </div>
         <div class="writing-info">
-            <p>{{ product.seller_id }} 님의 공동구매로 함께한 상품이에요.</p>
             <div class="writing-name">
                 <span class="writing-chip">
                     {{ product.category or '생활 · 패션' }}

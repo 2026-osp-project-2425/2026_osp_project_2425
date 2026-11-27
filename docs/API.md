@@ -15,7 +15,7 @@ Flask가 HTML 페이지와 API를 같은 서버에서 제공합니다. 경로의
 | --- | --- | --- | --- |
 | GET | `/signup` | — | 회원가입 폼 |
 | POST | `/signup` | `username`, `email`, `nickname`, `name`, `password`, `password_confirm`, 선택 `student_id`, `phone` | 로그인으로 이동 |
-| GET | `/check_id` | 쿼리 `username` | JSON `{"available":true,"message":"사용할 수 있는 아이디예요"}`. 실패 시 `available:false`, 저장소 장애 시 `503` |
+| GET | `/check_id` | 쿼리 `username` | JSON `{"available":true,"message":"사용 가능한 아이디입니다."}`. 실패 시 `available:false`, 저장소 장애 시 `503` |
 | GET | `/login` | 선택 쿼리 `next` | 로그인 폼 |
 | POST | `/login` | `username`, `password`, 선택 `next` | 세션 쿠키 발급 후 내부 경로 또는 마이페이지로 이동 |
 | POST | `/logout` | — | 세션 종료 후 메인으로 이동 |
@@ -45,7 +45,7 @@ Flask가 HTML 페이지와 API를 같은 서버에서 제공합니다. 경로의
 | `size_enabled`, `sizes`, `color_enabled`, `colors` | 선택. 켠 옵션의 값을 줄 단위로 제출. 색상은 `이름` 또는 `이름\|#RRGGBB` |
 | `custom_option_enabled`, `custom_option_name`, `custom_options` | 선택. 활성화하면 진행자가 지정하는 이름 하나와 줄 단위 선택지 필요. 선택지는 중복을 제거하고 최대 20개 저장 |
 
-공개 상품 상세에는 `inquiry_chat_url`을, 주문 소유자가 보는 참여 완료·참여 상세에는 `buyer_chat_url`을 템플릿 컨텍스트로 제공합니다. 구매자 링크를 등록하는 입력과 문의 링크를 보여주는 화면은 프런트엔드에서 연결해야 합니다.
+공개 상품 상세에는 `inquiry_chat_url`을, 주문 소유자가 보는 참여 완료·참여 상세에는 `buyer_chat_url`을 템플릿 컨텍스트로 제공합니다. 상품 상세에서 문의방을 열 수 있습니다. 기존 참여자용 링크는 공개 문의 링크로 전환되지 않습니다.
 
 ## 장바구니와 참여
 
@@ -58,7 +58,7 @@ Flask가 HTML 페이지와 API를 같은 서버에서 제공합니다. 경로의
 | GET | `/order_done/<order_id>` | — | 주문 소유자의 참여 완료 화면 |
 | GET | `/joined/<order_id>` | 쿼리 `tab=notice\|people\|contact` | 주문 소유자의 참여 상세 |
 
-수량은 기본 1이며 1~99 범위로 제한합니다. 기존 구매 화면과 호환되도록 `custom_option`은 생략할 수 있습니다. 전송한 값은 등록된 선택지와 일치해야 하며 Firebase 주문에 저장합니다.
+수량은 기본 1이며 1~99 범위로 제한합니다. 기타 옵션을 설정한 상품은 `custom_option` 값이 필수입니다. 선택값은 Firebase 주문에 저장합니다. 장바구니에서 참여할 때도 최신 선택지와 일치하는지 검사합니다.
 
 ## 리뷰
 
@@ -82,13 +82,13 @@ Flask가 HTML 페이지와 API를 같은 서버에서 제공합니다. 경로의
 
 ## Firebase 임시저장
 
-로그인한 사용자의 종류별 최근 한 건을 `draft/{username}/{kind}`에 저장합니다. `kind`는 `product` 또는 `review`입니다. 기존 화면의 임시저장 버튼이 이 API를 호출하도록 프런트엔드 연결이 필요합니다.
+로그인한 사용자의 종류별 최근 한 건을 `draft/{username}/{kind}`에 저장합니다. `kind`는 `product` 또는 `review`입니다. 상품 등록·리뷰 작성 폼과 마이페이지에서 이 API를 사용합니다. 게시 성공 시 제출한 버전과 같은 임시저장만 정리합니다.
 
 | 메서드 | 경로 | 성공 응답 |
 | --- | --- | --- |
 | GET | `/api/drafts/<kind>` | `200`. 데이터가 없으면 `{"draft":null}` |
 | PUT | `/api/drafts/<kind>` | `200`. 해당 종류를 한 건으로 저장하고 `draft` 객체 반환 |
-| DELETE | `/api/drafts/<kind>` | `204` |
+| DELETE | `/api/drafts/<kind>` | `204`. 선택 쿼리 `version`을 지정하면 해당 버전만 삭제하며, 다른 버전으로 바뀐 경우 `409` |
 
 상품 PUT은 상품 폼의 텍스트·숫자·체크박스 필드를 받습니다. 판매자 ID, 계산된 목표 금액과 사진은 제외합니다. 리뷰 PUT은 참여한 상품의 `product_id`와 선택 필드 `title`, `description`, `rating`을 받습니다. 요청은 최대 32 KiB입니다.
 

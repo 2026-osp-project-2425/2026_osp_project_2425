@@ -59,6 +59,7 @@
                 <div><dt>목표 금액</dt><dd>{{ product.target_amount|won ~ '원' if product.target_amount else '미정' }}</dd></div>
                 <div><dt>상품 상태</dt><dd>{{ status_labels.get(product.status,product.status) }}</dd></div>
                 <div><dt>문의 이메일</dt><dd>{{ product.email }}</dd></div>
+                {% if inquiry_chat_url %}<div><dt>문의 오픈채팅</dt><dd><a href="{{ inquiry_chat_url }}" target="_blank" rel="noopener noreferrer">문의방 입장</a></dd></div>{% endif %}
                 <div><dt>상세 설명</dt><dd class="preserve-lines">{{ product.description or '등록된 설명이 없습니다.' }}</dd></div>
             </dl>
         </div>
@@ -86,18 +87,18 @@
                 </fieldset>
                 <div class="qna-field">
                     <label for="qna-question">문의 내용</label>
-                    <textarea id="qna-question" name="question" placeholder="예: S 사이즈 어깨너비가 몇 cm인가요?" maxlength="{{ qna_max }}" rows="4" data-count-target="qna-count" required></textarea>
+                    <textarea id="qna-question" name="question" placeholder="예: S 사이즈 어깨너비" maxlength="{{ qna_max }}" rows="4" data-count-target="qna-count" required></textarea>
                     <span class="qna-counter"><span id="qna-count">0</span> / {{ qna_max }}자</span>
                 </div>
                 <div class="qna-write-actions">
-                    <span class="muted small">문의는 공개되며 닉네임은 일부 가려져 표시돼요. 개인정보는 적지 말아 주세요.</span>
+                    <span class="muted small">문의는 공개됩니다. 개인정보를 입력하지 마십시오.</span>
                     <button class="qna-submit" type="submit">문의 등록</button>
                 </div>
             </form>
             {% endif %}
 
             <div class="qna-list" data-qna-list data-page-size="5">
-                {% for q in qna_list if not q.is_private or (user and (user.username == q.author or user.username == product.seller_id)) %}
+                {% for q in qna_list %}
                 <details class="qna-row" data-qna-row>
                     <summary>
                         <span class="status-chip {{ 'done' if q.answer else 'wait' }}">{{ '답변 완료' if q.answer else '답변 대기' }}</span>
@@ -110,12 +111,12 @@
                         {% if q.answer %}
                         <div class="qna-answer"><b>A.</b><span class="preserve-lines">{{ q.answer }} <span class="muted small">· 진행자 · {{ (q.answer_date or '')[5:10] }}</span></span></div>
                         {% else %}
-                        <p class="muted small">진행자의 답변을 기다리고 있어요.</p>
+                        <p class="muted small">답변 대기</p>
                         {% endif %}
                     </div>
                 </details>
                 {% else %}
-                <p class="table-empty">등록된 문의가 아직 없어요. 궁금한 점을 질문해 보세요!</p>
+                <p class="table-empty">등록된 문의가 없습니다.</p>
                 {% endfor %}
             </div>
             <button class="qna-more" type="button" data-qna-more hidden>문의 더보기 ⌄</button>
@@ -128,9 +129,10 @@
 
     <form class="option-panel" id="option-form" action="{{ url_for('cart_add') }}" method="post" data-price="{{ product.price }}">
         <input type="hidden" name="product_id" value="{{ product.id }}">
-        <div class="option-head"><h2>옵션 선택</h2><span>{{ '진행자가 등록한 옵션 중에서 골라요' if product.sizes or product.colors else '이 상품은 따로 고를 옵션이 없어요' }}</span></div>
+        <div class="option-head"><h2>구매 옵션</h2></div>
         {% if product.sizes %}<fieldset><legend>사이즈</legend><div class="choices">{% for size in product.sizes %}<label class="choice"><input type="radio" name="size" value="{{ size }}" {{ 'checked' if loop.first }} required><span>{{ size }}</span></label>{% endfor %}</div></fieldset>{% endif %}
         {% if product.colors %}<fieldset><legend>색상</legend><div class="choices">{% for color in product.colors %}<label class="choice"><input type="radio" name="color" value="{{ color.name }}" {{ 'checked' if loop.first }} required><span>{% if color.hex %}<i class="swatch" style="background:{{ color.hex }};" aria-hidden="true"></i>{% endif %}{{ color.name }}</span></label>{% endfor %}</div></fieldset>{% endif %}
+        {% if product.custom_options %}<fieldset><legend>{{ product.custom_option_name or '기타 옵션' }}</legend><div class="choices">{% for option in product.custom_options %}<label class="choice"><input type="radio" name="custom_option" value="{{ option }}" {{ 'checked' if loop.first }} required><span>{{ option }}</span></label>{% endfor %}</div></fieldset>{% endif %}
         <div>
             <label class="option-label" for="quantity">수량</label>
             <div class="stepper">
@@ -141,12 +143,11 @@
         </div>
         <div class="option-total"><span>총 금액</span><b><output id="option-total" for="quantity">{{ product.price|won }}</output>원</b></div>
         {% if days_left is not none and days_left < 0 %}
-        <button class="option-buy" type="button" disabled>마감된 공동구매예요</button>
-        <p class="option-note">마감된 공동구매에는 참여하거나 장바구니에 담을 수 없어요.</p>
+        <button class="option-buy" type="button" disabled>공동구매 마감</button>
         {% else %}
         <button class="option-buy" type="submit" formaction="{{ url_for('participate') }}">구매하기</button>
         <button class="option-cart" type="submit">장바구니 담기</button>
-        <p class="option-note">{{ '' if user else '구매하려면 로그인이 필요해요. ' }}실습에서는 참여만 기록되고 실제 결제는 진행되지 않습니다.</p>
+        <p class="option-note">{{ '' if user else '공동구매에 참여하려면 로그인해야 합니다. ' }}실습에서는 참여만 기록되고 실제 결제는 진행되지 않습니다.</p>
         {% endif %}
     </form>
 </div>

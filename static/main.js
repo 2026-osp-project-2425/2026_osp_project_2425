@@ -132,57 +132,71 @@
                 message.classList.toggle('ok', result.available);
             } catch {
                 message.classList.remove('ok');
-                message.textContent = '아이디를 확인하지 못했어요. 다시 시도해 주세요.';
+                message.textContent = '아이디를 확인하지 못했습니다. 다시 시도해 주십시오.';
             }
         });
     });
 
-    // 임시 저장은 이 브라우저에만 남으며 사진은 저장하지 않는다.
-    function draftFields(form) {
-        return [...form.elements].filter((field) => field.name && !field.readOnly && !['file', 'hidden', 'submit', 'button'].includes(field.type));
-    }
-
-    function saveDraft(form) {
-        const values = {};
-        draftFields(form).forEach((field) => {
-            if (field.type === 'checkbox') values[field.name] = field.checked;
-            else if (field.type !== 'radio' || field.checked) values[field.name] = field.value;
+    async function draftRequest(kind, method = 'GET', data) {
+        const version = method === 'DELETE' ? `?version=${encodeURIComponent(data)}` : '';
+        const response = await fetch(`/api/drafts/${kind}${version}`, {
+            method,
+            ...(method === 'PUT' ? {headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)} : {}),
         });
-        try {
-            localStorage.setItem(`draft:${form.dataset.draft}`, JSON.stringify(values));
-            return true;
-        } catch {
-            return false;
-        }
+        if (response.status === 204) return null;
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || '임시저장 요청에 실패했습니다.');
+        return result.draft;
     }
 
     document.querySelectorAll('[data-draft]').forEach((form) => {
+        const kind = form.dataset.draft;
         const status = form.querySelector('[data-draft-status]');
+        const button = form.querySelector('[data-save-draft]');
+        const version = form.elements.draft_version;
+        const fields = [...form.elements].filter((field) =>
+            field.name && !field.readOnly && field !== version && field.type !== 'file');
+        const productId = form.elements.product_id?.value;
         let saved = null;
-        try {
-            saved = JSON.parse(localStorage.getItem(`draft:${form.dataset.draft}`));
-        } catch {
-            saved = null;
+        let edited = false;
+        form.addEventListener('input', () => { edited = true; });
+
+        function remember(draft) {
+            saved = draft;
+            version.value = draft.updated_at;
         }
-        if (saved) {
-            draftFields(form).forEach((field) => {
-                if (!(field.name in saved)) return;
-                if (field.type === 'radio') field.checked = field.value === saved[field.name];
-                else if (field.type === 'checkbox') field.checked = saved[field.name] === true;
-                else field.value = saved[field.name];
+
+        draftRequest(kind).then((draft) => {
+            if (!draft || edited || (kind === 'review' && draft.data.product_id !== productId)) return;
+            fields.forEach((field) => {
+                if (field.name === 'product_id' || !Object.hasOwn(draft.data, field.name)) return;
+                const value = draft.data[field.name];
+                if (field.type === 'checkbox') field.checked = value === true;
+                else if (field.type === 'radio') field.checked = field.value === String(value);
+                else field.value = value;
             });
-            status.textContent = '임시 저장한 내용을 불러왔습니다. 사진은 다시 선택해 주세요.';
-        }
-        form.querySelector('[data-save-draft]').addEventListener('click', () => {
-            status.textContent = saveDraft(form)
-                ? '임시 저장했습니다. 사진은 저장되지 않습니다.'
-                : '이 브라우저에서는 임시 저장을 사용할 수 없습니다.';
-        });
-        form.addEventListener('submit', () => {
+            remember(draft);
+            form.dispatchEvent(new Event('draft-restored'));
+            status.textContent = '임시저장 내용을 불러왔습니다. 사진은 다시 선택해야 합니다.';
+        }).catch((error) => { status.textContent = error.message; });
+
+        button.addEventListener('click', async () => {
+            button.disabled = true;
             try {
-                localStorage.removeItem(`draft:${form.dataset.draft}`);
-            } catch {
-                // 저장소를 쓸 수 없으면 지울 내용도 없다.
+                const latest = await draftRequest(kind);
+                if (latest && latest.updated_at !== saved?.updated_at
+                    && !window.confirm('이전에 임시 저장한 글을 덮어쓰시겠습니까?')) return;
+                const values = {};
+                fields.forEach((field) => {
+                    if (field.type === 'checkbox') values[field.name] = field.checked;
+                    else if (field.type !== 'radio' || field.checked) values[field.name] = field.value;
+                });
+                remember(await draftRequest(kind, 'PUT', values));
+                status.textContent = '임시 저장했습니다. 사진은 저장되지 않습니다.';
+            } catch (error) {
+                status.textContent = error.message;
+            } finally {
+                button.disabled = false;
             }
         });
     });
@@ -192,7 +206,6 @@
     const optionSection = document.querySelector('[data-option-section]');
     if (optionSection) {
         const form = optionSection.closest('form');
-        const category = form.querySelector('#category');
         const groups = [...optionSection.querySelectorAll('[data-option-group]')].map((group) => {
             const isColor = group.dataset.optionGroup === 'color';
             const store = group.querySelector('[data-option-store]');
@@ -200,11 +213,16 @@
             const add = group.querySelector('[data-option-add]');
             const toggle = group.querySelector('[data-option-toggle]');
             const body = group.querySelector('[data-option-body]');
-            const label = isColor ? '색상' : '사이즈';
-            const items = store.value.split('\n').map((line) => line.trim()).filter(Boolean).map((line) => {
-                const cut = line.lastIndexOf('|');
-                return isColor && cut > 0 ? { name: line.slice(0, cut), hex: line.slice(cut + 1) } : { name: line, hex: '' };
-            });
+            const label = isColor ? '색상' : group.dataset.optionGroup === 'custom' ? '기타 옵션' : '사이즈';
+            let items;
+            function restoreOptions() {
+                items = store.value.split('\n').map((line) => line.trim()).filter(Boolean).map((line) => {
+                    const cut = line.lastIndexOf('|');
+                    return isColor && cut > 0 ? { name: line.slice(0, cut), hex: line.slice(cut + 1) } : { name: line, hex: '' };
+                });
+                body.hidden = !toggle.checked;
+                render();
+            }
 
             function save() {
                 store.value = items.map((item) => (isColor ? `${item.name}|${item.hex}` : item.name)).join('\n');
@@ -260,8 +278,8 @@
                 button.addEventListener('click', () => addNames(button.dataset.preset.split(',')));
             });
             toggle.addEventListener('change', () => { body.hidden = !toggle.checked; });
-            body.hidden = !toggle.checked;
-            render();
+            restoreOptions();
+            form.addEventListener('draft-restored', restoreOptions);
 
             return {
                 // 입력만 하고 Enter를 누르지 않은 값도 제출할 때 함께 담는다.
@@ -271,17 +289,16 @@
                 },
                 missing() {
                     if (optionSection.hidden || !toggle.checked || items.length) return false;
-                    add.setCustomValidity(`${label}${isColor ? '을' : '를'} 하나 이상 입력하거나 '${label} 선택 받기'를 꺼 주세요.`);
+                    add.setCustomValidity(`${label}${isColor ? '을' : '를'} 하나 이상 입력하거나 '${label} 선택 받기'를 꺼 주십시오.`);
                     add.reportValidity();
                     return true;
                 },
             };
         });
 
-        const showSection = () => { optionSection.hidden = category.value !== optionSection.dataset.optionSection; };
-        category.addEventListener('change', showSection);
-        showSection();
-        // 임시 저장을 지우는 제출 처리보다 먼저 돌도록 캡처 단계에서 확인한다.
+        form.querySelector('[data-save-draft]')?.addEventListener('click', () => {
+            groups.forEach((group) => group.commit());
+        }, true);
         form.addEventListener('submit', (event) => {
             groups.forEach((group) => group.commit());
             if (groups.some((group) => group.missing())) {
@@ -305,6 +322,7 @@
         }
 
         inputs.forEach((input) => input.addEventListener('change', updateRating));
+        group.closest('form').addEventListener('draft-restored', updateRating);
         updateRating();
     });
 
@@ -312,6 +330,7 @@
         const current = field.parentElement.querySelector('[data-char-current]');
         const update = () => { current.textContent = field.value.length; };
         field.addEventListener('input', update);
+        field.closest('form')?.addEventListener('draft-restored', update);
         update();
     });
 
@@ -340,8 +359,6 @@
 
     document.querySelectorAll('[data-auto-submit]').forEach((select) => {
         select.addEventListener('change', () => {
-            // 선택을 바꾸면 페이지가 다시 열리므로 작성 중인 내용을 먼저 저장한다.
-            document.querySelectorAll('[data-draft]').forEach(saveDraft);
             select.form.requestSubmit();
         });
     });
@@ -358,7 +375,7 @@
     document.querySelectorAll('[data-copy]').forEach((button) => {
         const label = button.textContent;
         button.addEventListener('click', async () => {
-            button.textContent = await copyText(button.dataset.copy) ? '복사했어요 ✓' : '복사하지 못했어요';
+            button.textContent = await copyText(button.dataset.copy) ? '복사 완료 ✓' : '복사 실패';
             setTimeout(() => { button.textContent = label; }, 2000);
         });
     });
@@ -375,30 +392,37 @@
                     if (error.name === 'AbortError') return;
                 }
             }
-            status.textContent = await copyText(url) ? '상품 링크를 복사했어요.' : `링크를 직접 복사해 주세요: ${url}`;
+            status.textContent = await copyText(url) ? '상품 링크를 복사했습니다.' : `링크를 직접 복사해 주십시오: ${url}`;
         });
     });
 
     const productForm = document.getElementById('product-form');
     if (productForm) {
-        // 한국 시간 기준
-        const now = new Date();
-        const todayStr = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
-            .toISOString()
-            .split('T')[0];
+        const todayStr = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split('T')[0];
 
         const startDateInput = document.getElementById('start_date');
         const endDateInput = document.getElementById('end_date');
         const pickupDateInput = document.getElementById('pickup_date');
 
-        if (startDateInput) startDateInput.min = todayStr;
-        if (endDateInput) endDateInput.min = todayStr;
-        if (pickupDateInput) pickupDateInput.min = todayStr;
+        const originalStart = productForm.dataset.originalStart;
+        const minStart = originalStart && originalStart < todayStr ? originalStart : todayStr;
+        const invalidStart = (value) => value < todayStr && value !== originalStart;
+        if (startDateInput) startDateInput.min = minStart;
+        if (endDateInput) endDateInput.min = startDateInput.value || todayStr;
+        function updatePickupMinimum() {
+            pickupDateInput.min = endDateInput.value || todayStr;
+        }
+        endDateInput.addEventListener('change', updatePickupMinimum);
+        productForm.addEventListener('draft-restored', () => {
+            endDateInput.min = startDateInput.value || todayStr;
+            updatePickupMinimum();
+        });
+        updatePickupMinimum();
 
         // 오늘 이전 날짜 입력 차단 + 마감일 최소 날짜(min) 연동
         if (startDateInput) {
             startDateInput.addEventListener('change', () => {
-                if (startDateInput.value && startDateInput.value < todayStr) {
+                if (startDateInput.value && invalidStart(startDateInput.value)) {
                     alert('시작일은 오늘 이전 날짜를 선택할 수 없습니다.');
                     startDateInput.value = todayStr;
                 }
@@ -409,6 +433,7 @@
                     if (endDateInput.value && endDateInput.value < minEndDate) {
                         endDateInput.value = minEndDate;
                     }
+                    updatePickupMinimum();
                 }
             });
         }
@@ -425,8 +450,8 @@
 
         if (pickupDateInput) {
             pickupDateInput.addEventListener('change', () => {
-                if (pickupDateInput.value && pickupDateInput.value < todayStr) {
-                    pickupDateInput.value = todayStr;
+                if (pickupDateInput.value && pickupDateInput.value < pickupDateInput.min) {
+                    pickupDateInput.value = pickupDateInput.min;
                 }
             });
         }
@@ -439,7 +464,8 @@
                 priceHidden.value = nums;
                 priceDisplay.value = nums ? Number(nums).toLocaleString('ko-KR') : '';
             };
-            formatPrice(priceDisplay.value);
+            formatPrice(priceHidden.value);
+            productForm.addEventListener('draft-restored', () => formatPrice(priceHidden.value));
             priceDisplay.addEventListener('input', (e) => formatPrice(e.target.value));
         }
 
@@ -448,17 +474,19 @@
         const pickupTime = document.getElementById('pickup_time');
         const pickupHidden = document.getElementById('pickup_datetime');
 
-        if (pickupHidden && pickupHidden.value) {
-            const parts = pickupHidden.value.split(' ');
-            if (parts[0] && pickupDate) pickupDate.value = parts[0];
-            if (parts[1] && pickupAmpm) pickupAmpm.value = parts[1];
-            if (parts[2] && pickupTime) pickupTime.value = parts[2];
+        function restorePickup() {
+            const [date, period, time] = pickupHidden.value.split(' ');
+            pickupDate.value = date || '';
+            pickupAmpm.value = period || '오전';
+            pickupTime.value = time || '12:00';
         }
+        restorePickup();
+        productForm.addEventListener('draft-restored', restorePickup);
 
         const updatePickupDatetime = () => {
-            if (pickupDate && pickupDate.value && pickupHidden) {
-                pickupHidden.value = `${pickupDate.value} ${pickupAmpm ? pickupAmpm.value : ''} ${pickupTime ? pickupTime.value : ''}`.trim();
-            }
+            pickupHidden.value = pickupDate.value
+                ? `${pickupDate.value} ${pickupAmpm.value} ${pickupTime.value}`
+                : '';
         };
 
         if (pickupDate) pickupDate.addEventListener('change', updatePickupDatetime);
@@ -480,7 +508,7 @@
             });
 
             // 시작일이 오늘 이전인 경우 예외 처리
-            if (startDateInput && startDateInput.value && startDateInput.value < todayStr) {
+            if (startDateInput && startDateInput.value && invalidStart(startDateInput.value)) {
                 startDateInput.classList.add('field-invalid');
                 if (!invalidFields.includes(startDateInput)) {
                     invalidFields.push(startDateInput);
@@ -499,7 +527,7 @@
             }
 
             // 픽업일이 오늘 이전인 경우 예외 처리
-            if (pickupDateInput && pickupDateInput.value && pickupDateInput.value < todayStr) {
+            if (pickupDateInput && pickupDateInput.value && pickupDateInput.value < pickupDateInput.min) {
                 pickupDateInput.classList.add('field-invalid');
                 if (!invalidFields.includes(pickupDateInput)) {
                     invalidFields.push(pickupDateInput);
@@ -548,40 +576,40 @@
         });
     }
 
-    // 마이페이지 임시저장 목록 파싱
     const draftContainer = document.getElementById('draft-list-container');
-    const draftCountEl = document.getElementById('draft-count');
-
     if (draftContainer) {
-        const draftItems = [];
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (key && key.startsWith('draft:')) {
+        const count = document.getElementById('draft-count');
+        const empty = draftContainer.querySelector('.table-empty');
+        const kinds = [['product', '상품 등록'], ['review', '리뷰 작성']];
+        Promise.allSettled(kinds.map(async ([kind, label]) => {
+            const draft = await draftRequest(kind);
+            if (!draft) return;
+            const item = document.getElementById('draft-list-item').content.firstElementChild.cloneNode(true);
+            item.querySelector('.order-name').textContent = (kind === 'product' ? draft.data.name : draft.data.title) || label;
+            item.querySelector('.order-meta').textContent = label;
+            item.querySelector('a').href = draft.resume_url;
+            const button = item.querySelector('button');
+            button.addEventListener('click', async () => {
+                button.disabled = true;
                 try {
-                    const data = JSON.parse(localStorage.getItem(key));
-                    draftItems.push({ key, name: data.name || key.replace('draft:', '임시저장 글 '), data });
-                } catch (e) {
-                    // JSON 파싱 에러 방지
+                    await draftRequest(kind, 'DELETE', draft.updated_at);
+                    item.remove();
+                    updateCount();
+                } catch (error) {
+                    item.querySelector('[role="status"]').textContent = error.message;
+                    button.disabled = false;
                 }
-            }
-        }
+            });
+            draftContainer.append(item);
+        })).then((results) => {
+            if (results.some((result) => result.status === 'rejected')) empty.textContent = '일부 임시저장 글을 불러오지 못했습니다.';
+            updateCount();
+        });
 
-        if (draftCountEl) draftCountEl.textContent = `(${draftItems.length})`;
-
-        if (draftItems.length > 0) {
-            draftContainer.innerHTML = draftItems.map(item => `
-                <article class="order-item" style="justify-content:space-between;">
-                    <div class="order-body">
-                        <span class="status-chip wait">임시저장</span>
-                        <b class="order-name">${item.name}</b>
-                        <span class="order-meta">키: ${item.key}</span>
-                    </div>
-                    <div style="display:flex; gap:8px; align-items:center;">
-                        <a class="fill-btn" href="/registration">이어서 작성</a>
-                        <button class="line-btn" type="button" onclick="localStorage.removeItem('${item.key}'); location.reload();">삭제</button>
-                    </div>
-                </article>
-            `).join('');
+        function updateCount() {
+            const total = draftContainer.querySelectorAll('.order-item').length;
+            count.textContent = `(${total})`;
+            empty.hidden = total > 0 && empty.textContent === '임시 저장한 글이 없습니다.';
         }
     }
 
@@ -724,7 +752,7 @@ document.querySelectorAll("button.review-like-small").forEach((button) => {
             const data = await response.json();
             showLikeState(data.liked);
         } catch {
-            message.textContent = "다시 시도해 주세요.";
+            message.textContent = "다시 시도해 주십시오.";
         } finally {
             button.disabled = false;
         }

@@ -1,6 +1,6 @@
 {% extends "index.html" %}
 {% block content %}
-{% if product %}{{ product_banner(product, '이 상품의 리뷰만 보고 있어요') }}{% endif %}
+{% if product %}{{ product_banner(product) }}{% endif %}
 <div class="two-column review-layout">
     <section class="list-main">
         <div class="list-toolbar">
@@ -34,12 +34,10 @@
             {% if product and not review_count %}
             <div class="white-card review-empty">
                 <span class="review-empty-icon" aria-hidden="true">✎</span>
-                <b>아직 이 상품의 리뷰가 없어요</b>
+                <b>아직 이 상품의 리뷰가 없습니다</b>
                 {% if joined %}
-                <p>참여한 공동구매는 어떠셨나요?<br>다른 벗들이 볼 수 있도록 첫 리뷰를 남겨 주세요.</p>
                 <a class="review-write-btn big" href="{{ url_for('reg_review', product_id=product.id) }}">✎ 리뷰 쓰기</a>
                 {% else %}
-                <p>다른 벗들이 볼 수 있도록<br>공동구매에 참여하여 리뷰를 적어보세요.</p>
                 <a class="review-write-btn big" href="{{ url_for('product_detail', id=product.id) }}">공동구매 참여하러 가기 →</a>
                 {% endif %}
             </div>
@@ -59,7 +57,7 @@
         {% if not product %}
         <a class="write-review" href="{{ url_for('reg_review') }}">리뷰 작성하기</a>
         {% elif not joined %}
-        <p class="review-rail-note">리뷰는 이 공동구매에 참여한 벗만 쓸 수 있어요.</p>
+        <p class="review-rail-note">공동구매 참여자만 리뷰를 작성할 수 있습니다.</p>
         {% elif my_review %}
         <a class="write-review line" href="{{ url_for('review_detail', id=my_review.id) }}">내가 쓴 리뷰 보기</a>
         {% elif review_count %}

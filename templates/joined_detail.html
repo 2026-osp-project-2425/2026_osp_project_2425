@@ -21,11 +21,11 @@
                 <div><dt>목표 인원</dt><dd>{{ f.target ~ '명' if f.target else '미정' }}</dd></div>
                 <div><dt>가격</dt><dd class="joined-price">{{ product.price|won }}원</dd></div>
             </dl>
-            {% if product.chat_url and (f.confirmed or (f.closed and not f.cancelled)) %}
+            {% if buyer_chat_url %}
             <div class="chat-strip">
                 <span class="chat-badge">{{ icon('chat') }}</span>
-                <span class="chat-strip-text"><span>참여자 전용 · 진행자 오픈채팅방</span><span>{{ product.chat_url }}</span></span>
-                <a href="{{ product.chat_url }}" target="_blank" rel="noopener noreferrer">입장하기 ↗</a>
+                <span class="chat-strip-text"><span>참여자 전용 · 진행자 오픈채팅방</span><span>{{ buyer_chat_url }}</span></span>
+                <a href="{{ buyer_chat_url }}" target="_blank" rel="noopener noreferrer">입장하기 ↗</a>
             </div>
             {% endif %}
         </div>
@@ -33,10 +33,10 @@
             <b>공동구매 진행 현황</b>
             <div class="joined-count"><span>참여 <b>{{ f.participants }}명</b>{% if f.target %} / 목표 {{ f.target }}명{% endif %}</span>{% if f.target %}<b>{{ f.progress }}%</b>{% endif %}</div>
             {% if f.target %}<progress value="{{ f.progress }}" max="100" aria-label="공동구매 진행률">{{ f.progress }}%</progress>{% endif %}
-            <p>{% if f.cancelled %}마감 때 목표 인원에 못 미쳐 공동구매가 취소됐어요.
-               {% elif f.closed %}목표 인원을 채워 공동구매가 확정됐어요. 수령 안내를 확인해 주세요.
-               {% elif f.target and f.remaining %}💡 목표 인원까지 <b>{{ f.remaining }}명</b> 남았어요! 마감 전까지 주변 이화인에게도 공유해보세요.
-               {% else %}🎉 목표 인원을 채웠어요! 마감까지 더 참여할 수 있어요.{% endif %}</p>
+            <p>{% if f.cancelled %}목표 인원 미달로 공동구매가 취소되었습니다.
+               {% elif f.closed %}목표 인원을 달성하여 공동구매가 확정되었습니다.
+               {% elif f.target and f.remaining %}목표까지 <b>{{ f.remaining }}명</b>이 남았습니다.
+               {% else %}목표 인원을 달성했습니다.{% endif %}</p>
             <button class="line-btn" type="button" data-share="{{ url_for('product_detail', id=product.id, _external=true) }}" data-share-title="{{ product.name }}">↗ 공유하기</button>
             <p class="share-status" data-share-status aria-live="polite"></p>
         </div>
@@ -60,7 +60,7 @@
 
     <section class="panel">
         <h2 class="panel-title">진행 일정</h2>
-        {% if steps %}{{ step_list(steps) }}{% else %}<p class="steps-note">목표 인원 미달로 공동구매가 취소되어 이후 일정이 진행되지 않아요.</p>{% endif %}
+        {% if steps %}{{ step_list(steps) }}{% else %}<p class="steps-note">목표 인원 미달로 공동구매가 취소되어 이후 일정이 진행되지 않습니다.</p>{% endif %}
     </section>
 
     <section class="panel news-panel">
@@ -98,17 +98,17 @@
             </div>
             {% endif %}
             {% else %}
-            <p class="news-empty">아직 등록된 공지사항이 없어요. 진행자가 공지를 올리면 여기에 보여요.</p>
+            <p class="news-empty">등록된 공지사항이 없습니다.</p>
             {% endfor %}
         {% elif tab == 'people' %}
-            <p class="news-lead">지금까지 <b>{{ f.participants }}명</b>이 참여했어요{% if f.target %} (목표 {{ f.target }}명){% endif %}. 다른 참여자의 이름은 공개되지 않아요.</p>
+            <p class="news-lead">참여 인원 <b>{{ f.participants }}명</b>{% if f.target %} · 목표 {{ f.target }}명{% endif %}</p>
             {% for o in options %}<div class="news-row"><span>{{ o.option }}</span><span class="news-date">{{ o.quantity }}개</span></div>
-            {% else %}<p class="news-empty">이 사이트에서 기록된 옵션별 주문이 아직 없어요.</p>{% endfor %}
+            {% else %}<p class="news-empty">옵션별 주문이 없습니다.</p>{% endfor %}
         {% else %}
-            <p class="news-lead">상품이나 수령에 대한 문의는 진행자에게 직접 해 주세요.</p>
+            <p class="news-lead">상품과 수령 문의는 진행자에게 연락 바랍니다.</p>
             <div class="news-row"><span class="status-chip off">이메일</span><a href="mailto:{{ product.email }}">{{ product.email }}</a></div>
-            {% if product.chat_url and (f.confirmed or (f.closed and not f.cancelled)) %}
-            <div class="news-row"><span class="status-chip off">오픈채팅</span><a href="{{ product.chat_url }}" target="_blank" rel="noopener noreferrer">진행자 오픈채팅방 입장하기 ↗</a></div>
+            {% if buyer_chat_url %}
+            <div class="news-row"><span class="status-chip off">오픈채팅</span><a href="{{ buyer_chat_url }}" target="_blank" rel="noopener noreferrer">진행자 오픈채팅방 입장하기 ↗</a></div>
             {% endif %}
         {% endif %}
     </section>

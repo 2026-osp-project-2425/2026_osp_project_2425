@@ -6,8 +6,8 @@
 <div class="form-stack">
     {% if not product %}
     <section class="white-card empty-state">
-        <p>아직 리뷰를 작성할 수 있는 상품이 없어요.</p>
-        <p class="muted small">공동구매에 참여한 상품만 리뷰를 작성할 수 있어요.</p>
+        <p>아직 리뷰를 작성할 수 있는 상품이 없습니다.</p>
+        <p class="muted small">공동구매에 참여한 상품만 리뷰를 작성할 수 있습니다.</p>
         <a class="btn" href="{{ url_for('view_list') }}">
             진행 중인 공동구매 보기
         </a>
@@ -48,7 +48,6 @@
                 {% endif %}
             </div>
             <div class="writing-info">
-                <p>{{ product.seller_id }} 님의 공동구매로 함께한 상품이에요.</p>
                 <div class="writing-name">
                     <span class="writing-chip">
                         {{ product.category or '생활 · 패션' }}
@@ -74,6 +73,7 @@
           enctype="multipart/form-data"
           {% if not editing %}data-draft="review"{% endif %}>
 
+        {% if not editing %}<input type="hidden" name="draft_version">{% endif %}
         <input type="hidden" name="product_id" value="{{ product.id }}">
 
         <label class="field">
@@ -123,7 +123,6 @@
             <p class="writer-hint">
                 작성자
                 <b>{{ user.username if user else 'User' }}</b>
-                · {{ '기존 리뷰를 수정하고 있어요' if editing else '로그인 계정으로 등록돼요' }}
             </p>
 
             <label class="field">
@@ -139,7 +138,7 @@
                 <span>상세 설명</span>
                 <textarea id="description"
                           name="description"
-                          placeholder="사이즈감, 품질, 수령 과정은 어땠나요?"
+                          placeholder="사이즈, 품질, 수령 과정에 대한 후기"
                           maxlength="500"
                           required
                           data-char-count>{{ review.description if editing else '' }}</textarea>

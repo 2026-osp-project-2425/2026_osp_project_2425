@@ -36,12 +36,11 @@
 {% set filled = score|round|int %}<span class="stars" role="img" aria-label="{{ label }} {{ '%.1f'|format(score) }}점">{{ '★' * filled }}<span class="star-off">{{ '★' * (5 - filled) }}</span></span>
 {%- endmacro %}
 
-{% macro product_banner(p, note) -%}
+{% macro product_banner(p) -%}
 {% set f = p|funding %}
 <section class="product-banner">
     {{ thumb(p.image) }}
     <div class="banner-body">
-        <p class="banner-note">{{ note }}</p>
         <div class="banner-name"><b>{{ p.name }}</b><span class="chip">{{ p.category or '생활 · 패션' }}</span></div>
         <p class="banner-note">{{ p.seller_id }} 님의 공동구매{% if p.end_date %} · {{ p.end_date|replace('-','.') }} 마감{% endif %}{% if f.target %} · {% if f.confirmed %}목표 달성{% elif f.cancelled %}목표 미달{% else %}진행 중{% endif %} {{ f.participants }} / {{ f.target }}명{% endif %}</p>
     </div>
@@ -70,7 +69,7 @@
     <p class="eyebrow">{{ p.seller_id }} · {{ p.manufacturer or '미정' }}</p>
     <h3><a href="{{ url_for('product_detail', id=p.id) }}">{{ p.name }}</a></h3>
     <p class="price">{{ p.price|won }}<span>원</span></p>
-    <div class="product-funding">{% if not f.participants %}<b class="waiting">첫 참여자를 기다려요</b>{% elif f.target %}<b>{{ f.progress }}% 달성</b>{% else %}<b>{{ f.participants }}명 참여</b>{% endif %}<span>{% if f.target %}{{ f.participants }} / {{ f.target }}명{% else %}목표 인원 미정{% endif %}</span></div>
+    <div class="product-funding">{% if not f.participants %}<b class="waiting">참여 0명</b>{% elif f.target %}<b>{{ f.progress }}% 달성</b>{% else %}<b>{{ f.participants }}명 참여</b>{% endif %}<span>{% if f.target %}{{ f.participants }} / {{ f.target }}명{% else %}목표 인원 미정{% endif %}</span></div>
     {% if f.target %}<progress value="{{ f.progress }}" max="100" aria-label="공동구매 진행률">{{ f.progress }}%</progress>{% endif %}
     <a class="detail-link" href="{{ url_for('product_detail', id=p.id) }}">자세히 보기 →</a>
 </article>
@@ -88,7 +87,7 @@
     <div class="closed-actions">
         {% if stats %}<a class="review-button" href="{{ url_for('view_review', product_id=p.id) }}">리뷰 보기 <span class="star-on">★</span>{{ '%.1f'|format(stats.average) }} <span class="review-count">({{ stats.count }})</span></a>
         {% elif f.cancelled %}<span class="no-review">취소되어 리뷰 없음</span>
-        {% else %}<span class="no-review">아직 리뷰가 없어요</span>{% endif %}
+        {% else %}<span class="no-review">아직 리뷰가 없습니다</span>{% endif %}
         <a class="detail-link" href="{{ url_for('product_detail', id=p.id) }}">자세히 보기 →</a>
     </div>
 </article>
@@ -106,14 +105,14 @@
     </div>
     {% if query or category %}<p class="filter-summary">{{ query or category }} 검색 결과 <a href="{{ url_for('view_list', status=status) }}">전체 보기</a></p>{% endif %}
     {% if status == 'closed' %}
-    <div class="list-heading closed"><h2>마감된 공동구매 <span>{{ product_count }}</span></h2><p>참여한 이화인들의 리뷰를 확인해 보세요</p></div>
+    <div class="list-heading closed"><h2>마감된 공동구매 <span>{{ product_count }}</span></h2></div>
     {% else %}
     <div class="list-heading"><h2>진행 중인 공동구매 <span>{{ product_count }}</span></h2></div>
     {% endif %}
     <div class="product-grid">
     {% for p in products %}
     {% if status == 'closed' %}{{ closed_card(p) }}{% else %}{{ open_card(p) }}{% endif %}
-    {% else %}<div class="white-card empty-state product-grid-empty">{% if status == 'closed' %}<p>마감된 공동구매가 없어요.</p><a class="btn" href="{{ url_for('view_list') }}">진행 중인 공동구매 보기</a>{% else %}<p>진행 중인 공동구매가 없어요.</p><a class="btn" href="{{ url_for('reg_item') }}">상품 등록하기</a>{% endif %}</div>{% endfor %}
+    {% else %}<div class="white-card empty-state product-grid-empty">{% if status == 'closed' %}<p>마감된 공동구매가 없습니다.</p><a class="btn" href="{{ url_for('view_list') }}">진행 중인 공동구매 보기</a>{% else %}<p>진행 중인 공동구매가 없습니다.</p><a class="btn" href="{{ url_for('reg_item') }}">상품 등록하기</a>{% endif %}</div>{% endfor %}
     </div>
     {{ pagination('view_list') }}
 </section>
@@ -133,7 +132,7 @@
             {% endfor %}
         </ol>
         {% else %}
-        <p class="rank-empty">아직 집계된 랭킹이 없어요.</p>
+        <p class="rank-empty">아직 집계된 랭킹이 없습니다.</p>
         {% endif %}
         <p class="rank-note">공동구매 참여 인원 기준</p>
     </section>
@@ -154,7 +153,7 @@
 <body>
 <div class="app-shell">
     <aside class="sidebar">
-        <div class="profile"><a class="avatar {{ '' if user else 'guest' }}" href="{{ url_for('account') }}" aria-label="마이페이지"></a><a class="login-message">{{ user.username ~ ' 님' if user else '로그인이 필요해요' }}</a>{% if user %}<form action="{{ url_for('logout') }}" method="post"><button class="profile-action" type="submit">로그아웃</button></form>{% else %}<a class="login-pill" href="{{ url_for('login') }}">로그인</a>{% endif %}</div>
+        <div class="profile"><a class="avatar {{ '' if user else 'guest' }}" href="{{ url_for('account') }}" aria-label="마이페이지"></a><a class="login-message">{{ user.username ~ ' 님' if user else '로그인 필요' }}</a>{% if user %}<form action="{{ url_for('logout') }}" method="post"><button class="profile-action" type="submit">로그아웃</button></form>{% else %}<a class="login-pill" href="{{ url_for('login') }}">로그인</a>{% endif %}</div>
         <nav class="side-menu" aria-label="사이드 메뉴">
             <h2>MENU</h2>
             {% for endpoint,text,key in [('login','로그인','login'),('view_list','상품 목록','list'),('reg_item','상품 등록','registration'),('reg_review','리뷰 작성','writing'),('view_review','리뷰 목록','review'),('cart','장바구니','cart')] %}

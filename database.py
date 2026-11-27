@@ -31,7 +31,7 @@ def shared_operation(function):
         except (ValueError, SharedStoreError):
             raise
         except Exception as error:
-            raise SharedStoreError("Firebase 연결에 실패했습니다. 인터넷, 인증키, DATABASE_URL을 확인해 주세요.") from error
+            raise SharedStoreError("Firebase 연결에 실패했습니다. 인터넷, 인증키, DATABASE_URL을 확인해 주십시오.") from error
     return call
 
 class DBhandler:
@@ -41,7 +41,7 @@ class DBhandler:
         except ValueError:
             key_path = Path(os.environ.get("OSP_FIREBASE_KEY", ROOT / "authentication" / "firebase-key.json"))
             if not key_path.is_file():
-                raise FileNotFoundError("authentication/firebase-key.json 파일을 프로젝트에 넣어 주세요. 인증키는 Git에 올리지 않습니다.")
+                raise FileNotFoundError("authentication/firebase-key.json 파일을 프로젝트에 넣어 주십시오. 인증키는 Git에 올리지 않습니다.")
             self.app = firebase_admin.initialize_app(credentials.Certificate(str(key_path)), {"databaseURL": DATABASE_URL, "httpTimeout": 20}, name="ewhamarket")
 
     def ref(self, path):
@@ -59,7 +59,7 @@ class DBhandler:
     def validate_item_name(name):
         name = str(name).strip()
         if not name:
-            raise ValueError("상품명을 입력해 주세요.")
+            raise ValueError("상품명을 입력해 주십시오.")
         if re.search(r"[.#$\[\]/\x00-\x1f\x7f]", name) or len(name.encode("utf-8")) > 768:
             raise ValueError("상품명에는 . # $ [ ] / 및 제어 문자를 사용할 수 없으며 768바이트 이내여야 합니다.")
         return name
@@ -146,7 +146,7 @@ class DBhandler:
                 raise ValueError("수정할 리뷰가 없습니다.")
 
             if current.get("author") != author:
-                raise ValueError("본인이 작성한 리뷰만 수정할 수 있어요.")
+                raise ValueError("본인이 작성한 리뷰만 수정할 수 있습니다.")
 
             return dict(
                 current,
@@ -254,7 +254,7 @@ class DBhandler:
         product_id = str(product_id)
         matches = [item for item in self.get_items() if item["id"] == product_id]
         if len(matches) > 1:
-            raise SharedStoreError("중복된 상품 ID가 있습니다. 상품 데이터를 확인해 주세요.")
+            raise SharedStoreError("중복된 상품 ID가 있습니다. 상품 데이터를 확인해 주십시오.")
         return matches[0] if matches else None
 
     @shared_operation
@@ -268,7 +268,7 @@ class DBhandler:
 
         def create(current):
             if current is not None:
-                raise DuplicateItemError("이미 등록된 상품명입니다. 다른 상품명을 입력해 주세요.")
+                raise DuplicateItemError("이미 등록된 상품명입니다. 다른 상품명을 입력해 주십시오.")
             return item
 
         self.ref("item").child(item["name"]).transaction(create)
@@ -291,7 +291,7 @@ class DBhandler:
             name = self.validate_item_name(item.get("name", ""))
             item["name"] = name
             if name != old_key and name in entries:
-                raise DuplicateItemError("이미 등록된 상품명입니다. 다른 상품명을 입력해 주세요.")
+                raise DuplicateItemError("이미 등록된 상품명입니다. 다른 상품명을 입력해 주십시오.")
             entries.pop(old_key)
             entries[name] = item
             return entries
@@ -315,9 +315,9 @@ class DBhandler:
     def upload_image(self, content, filename):
         extension = Path(filename).suffix.lower()
         if extension not in IMAGE_TYPES:
-            raise ValueError("PNG, JPG, GIF, WEBP 사진을 선택해 주세요.")
+            raise ValueError("PNG, JPG, GIF, WEBP 사진을 선택해 주십시오.")
         if not content or len(content) > MAX_IMAGE_BYTES:
-            raise ValueError("사진은 파일당 5MB 이하로 선택해 주세요.")
+            raise ValueError("사진은 파일당 5MB 이하로 선택해 주십시오.")
         image_id = uuid4().hex
         self.ref("product_images").child(image_id).set({"content_type": IMAGE_TYPES[extension], "base64": base64.b64encode(content).decode("ascii")})
         return "shared/" + image_id
@@ -354,7 +354,7 @@ class DBhandler:
     @staticmethod
     def validate_username(username):
         if not re.fullmatch(r"[A-Za-z0-9_]{3,30}", username):
-            raise ValueError("ID는 영문, 숫자, 밑줄을 사용해 3~30자로 입력해 주세요.")
+            raise ValueError("ID는 영문, 숫자, 밑줄을 사용해 3~30자로 입력해 주십시오.")
 
     @shared_operation
     def get_draft(self, username, kind):
@@ -367,8 +367,19 @@ class DBhandler:
         return draft
 
     @shared_operation
-    def delete_draft(self, username, kind):
-        self.ref("draft").child(username).child(kind).delete()
+    def delete_draft(self, username, kind, version=None):
+        user_drafts = self.ref("draft").child(username)
+        if version is None:
+            user_drafts.child(kind).delete()
+            return True
+
+        def remove_if_unchanged(current):
+            drafts = dict(current or {})
+            if drafts.get(kind, {}).get("updated_at") == version:
+                del drafts[kind]
+            return drafts
+
+        return kind not in user_drafts.transaction(remove_if_unchanged)
 
     @shared_operation
     def get_user(self, username):
@@ -384,7 +395,7 @@ class DBhandler:
         username = record["username"]
         self.validate_username(username)
         if not record.get("nickname", "").strip():
-            raise ValueError("닉네임을 입력해 주세요.")
+            raise ValueError("닉네임을 입력해 주십시오.")
         if not record.get("password_hash", "").startswith(("scrypt:", "pbkdf2:")):
             raise ValueError("비밀번호는 해시로 변환한 뒤 저장해야 합니다.")
         allowed = ("username", "nickname", "password_hash", "name", "email", "student_id", "phone", "joined_at")

@@ -5,8 +5,7 @@
 <div class="done-stack">
     <section class="panel done-head">
         <div class="done-check">{{ icon('check') }}</div>
-        <h1>공동구매 참여가 확정됐어요!</h1>
-        <p>진행 소식과 수령 안내는 {{ '아래 오픈채팅방에서' if product.chat_url else '진행자가 등록한 연락처로' }} 진행자가 알려드려요.</p>
+        <h1>공동구매 참여가 확정되었습니다!</h1>
     </section>
 
     <section class="panel chat-panel">
@@ -14,15 +13,15 @@
             <span class="chat-badge">{{ icon('chat') }}</span>
             <div><span class="chat-kicker">참여자 전용</span><b>진행자 오픈채팅방</b><span class="chat-sub">{{ product.seller_id }} · {{ product.name }} 참여자방</span></div>
         </div>
-        {% if product.chat_url %}
+        {% if buyer_chat_url %}
         <div class="chat-actions">
-            <div class="chat-url">{{ icon('link') }}<span id="chat-url">{{ product.chat_url }}</span></div>
-            <button class="chat-copy" type="button" data-copy="{{ product.chat_url }}">링크 복사</button>
-            <a class="chat-enter" href="{{ product.chat_url }}" target="_blank" rel="noopener noreferrer">오픈채팅 입장하기 ↗</a>
+            <div class="chat-url">{{ icon('link') }}<span id="chat-url">{{ buyer_chat_url }}</span></div>
+            <button class="chat-copy" type="button" data-copy="{{ buyer_chat_url }}">링크 복사</button>
+            <a class="chat-enter" href="{{ buyer_chat_url }}" target="_blank" rel="noopener noreferrer">오픈채팅 입장하기 ↗</a>
         </div>
-        <p class="chat-note">이 링크는 공동구매에 참여한 이화인에게만 보여요. 마이페이지 › 참여 상품 상세에서도 다시 볼 수 있어요.</p>
+        <p class="chat-note">구매자 오픈채팅은 마이페이지의 참여 상품 상세에도 표시됩니다.</p>
         {% else %}
-        <p class="chat-note">진행자가 아직 오픈채팅 링크를 등록하지 않았어요. 등록되면 마이페이지 › 참여 상품 상세에서 볼 수 있어요.</p>
+        <p class="chat-note">진행자가 아직 구매자 오픈채팅 링크를 등록하지 않았습니다.</p>
         {% endif %}
     </section>
 
@@ -36,7 +35,7 @@
         <dl class="kv">
             <div><dt>주문 번호</dt><dd>{{ order|order_number }}</dd></div>
             <div><dt>수령 예정</dt><dd>{{ pickup_text }} · {{ product.address }}</dd></div>
-            <div><dt>진행자 연락</dt><dd>{{ '오픈채팅방 또는 ' if product.chat_url }}{{ product.email }}</dd></div>
+            <div><dt>진행자 연락</dt><dd>{{ '오픈채팅방 또는 ' if buyer_chat_url }}{{ product.email }}</dd></div>
         </dl>
     </section>
 

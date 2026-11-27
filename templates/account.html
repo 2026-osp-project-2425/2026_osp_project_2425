@@ -49,7 +49,7 @@
                 <div class="order-progress">
                     {% if f.target %}<span><b>{{ f.progress }}%</b> · {{ f.participants }} / {{ f.target }}명</span><progress value="{{ f.progress }}" max="100" aria-label="공동구매 진행률">{{ f.progress }}%</progress>{% else %}<span>{{ f.participants }}명 참여</span>{% endif %}
                 </div>
-                {% elif f.cancelled %}<span class="order-state">마감 때 목표 인원에 못 미쳤어요</span>
+                {% elif f.cancelled %}<span class="order-state">목표 인원 미달</span>
                 {% elif f.received %}<span class="order-state">수령 완료{% if f.pickup %} ({{ f.pickup }}){% endif %}</span>
                 {% else %}<span class="order-state">수령 예정 ({{ f.pickup }})</span>{% endif %}
                 {% if e.review %}<a class="line-btn" href="{{ url_for('review_detail', id=e.review.id) }}">☆ 내 리뷰 보기</a>
@@ -79,34 +79,43 @@
         {% endif %}
         {% else %}
             <div class="order-empty">
-                {% if status != 'all' %}<p>해당하는 공동구매가 없어요.</p>
-                {% elif tab == 'joined' %}<p>아직 참여한 공동구매가 없어요.</p><a class="detail-link" href="{{ url_for('view_list') }}">진행 중인 공동구매 둘러보기 →</a>
-                {% else %}<p>아직 진행한 공동구매가 없어요.</p><a class="detail-link" href="{{ url_for('reg_item') }}">공동구매 상품 등록하기 →</a>{% endif %}
+                {% if status != 'all' %}<p>해당하는 공동구매가 없습니다.</p>
+                {% elif tab == 'joined' %}<p>아직 참여한 공동구매가 없습니다.</p><a class="detail-link" href="{{ url_for('view_list') }}">진행 중인 공동구매 둘러보기 →</a>
+                {% else %}<p>아직 진행한 공동구매가 없습니다.</p><a class="detail-link" href="{{ url_for('reg_item') }}">공동구매 상품 등록하기 →</a>{% endif %}
             </div>
         {% endfor %}
         </div>
     </section>
 
-    <!-- 임시저장 글 목록 섹션 -->
+    <template id="draft-list-item">
+        <article class="order-item">
+            <div class="order-body">
+                <b class="order-name"></b>
+                <span class="order-meta"></span>
+                <span role="status"></span>
+            </div>
+            <a class="fill-btn">이어서 작성</a>
+            <button class="line-btn" type="button">삭제</button>
+        </article>
+    </template>
     <section class="account-card draft-section" style="margin-top:20px;">
         <div class="orders-head">
             <h2>임시저장 글 <span id="draft-count">(0)</span></h2>
         </div>
         <div id="draft-list-container" class="order-list">
-            <p class="table-empty">이 브라우저에 임시저장된 글이 없어요.</p>
+            <p class="table-empty">임시 저장한 글이 없습니다.</p>
         </div>
     </section>
 {% else %}
     <section class="account-card login-prompt">
         <div class="lock-icon">{{ icon('lock') }}</div>
-        <div class="login-prompt-text"><h2>계정 정보</h2><p>로그인하면 내 정보와 공동구매 참여 내역을 확인할 수 있어요.</p></div>
+        <div class="login-prompt-text"><h2>계정 정보</h2><p>로그인 후 계정과 참여 내역을 확인할 수 있습니다.</p></div>
         <div class="login-prompt-actions"><a class="btn" href="{{ url_for('login') }}">로그인</a><a class="detail-link" href="{{ url_for('signup') }}">회원가입 →</a></div>
     </section>
     <section class="account-card">
         <h2 class="locked-title">공동구매 참여 내역</h2>
         <div class="locked-box">
-            <strong>로그인 후 확인할 수 있어요</strong>
-            <p>참여한 공동구매의 진행 상황과 리뷰 작성 여부를 한눈에 볼 수 있어요.</p>
+            <strong>로그인 필요</strong>
             <a class="detail-link" href="{{ url_for('view_list') }}">진행 중인 공동구매 둘러보기 →</a>
         </div>
     </section>
